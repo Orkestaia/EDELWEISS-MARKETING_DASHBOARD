@@ -7,6 +7,7 @@ import {
 import { Target, Eye, DollarSign, MousePointerClick, TrendingUp } from 'lucide-react';
 import { MetaAdData } from '@/lib/data';
 import { StatCard, cn } from './ui/StatCard';
+import { Glossary } from './Glossary';
 
 interface Props {
   data: MetaAdData[];
@@ -141,9 +142,21 @@ export function MetaAdsDashboard({ data }: Props) {
                 <th className="px-6 py-4 font-medium">Campaign Name</th>
                 <th className="px-6 py-4 font-medium">Status</th>
                 <th className="px-6 py-4 font-medium text-right">Spend</th>
+                <th className="px-6 py-4 font-medium text-right">Reach</th>
+                <th className="px-6 py-4 font-medium text-right">Impressions</th>
+                <th className="px-6 py-4 font-medium text-right">Freq.</th>
                 <th className="px-6 py-4 font-medium text-right">Results</th>
-                <th className="px-6 py-4 font-medium text-right">Cost/Result</th>
-                <th className="px-6 py-4 font-medium text-right">CTR</th>
+                <th className="px-6 py-4 font-medium text-right">Cost/Res</th>
+                <th className="px-6 py-4 font-medium text-right">CPM</th>
+                <th className="px-6 py-4 font-medium text-right">Link Clicks</th>
+                <th className="px-6 py-4 font-medium text-right">CPC (Link)</th>
+                <th className="px-6 py-4 font-medium text-right">CTR (Link)</th>
+                <th className="px-6 py-4 font-medium text-right">Clicks (All)</th>
+                <th className="px-6 py-4 font-medium text-right">CTR (All)</th>
+                <th className="px-6 py-4 font-medium text-right">CPC (All)</th>
+                <th className="px-6 py-4 font-medium text-right">LPV</th>
+                <th className="px-6 py-4 font-medium text-right">Cost/LPV</th>
+                <th className="px-6 py-4 font-medium">Notes</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/10 text-slate-300">
@@ -160,16 +173,30 @@ export function MetaAdsDashboard({ data }: Props) {
                       {campaign.status || 'Unknown'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">{formatCurrency(campaign.spend)}</td>
-                  <td className="px-6 py-4 text-right">{formatNumber(campaign.results)}</td>
-                  <td className="px-6 py-4 text-right">{formatCurrency(campaign.costPerResult)}</td>
-                  <td className="px-6 py-4 text-right">{campaign.ctrAll}%</td>
+                  <td className="px-6 py-4 text-right text-slate-200">{formatCurrency(campaign.spend)}</td>
+                  <td className="px-6 py-4 text-right">{formatNumber(campaign.reach)}</td>
+                  <td className="px-6 py-4 text-right">{formatNumber(campaign.impressions)}</td>
+                  <td className="px-6 py-4 text-right">{campaign.frequency}</td>
+                  <td className="px-6 py-4 text-right text-emerald-400">{formatNumber(campaign.results)}</td>
+                  <td className="px-6 py-4 text-right font-medium">{formatCurrency(campaign.costPerResult)}</td>
+                  <td className="px-6 py-4 text-right">{formatCurrency(campaign.cpm)}</td>
+                  <td className="px-6 py-4 text-right">{formatNumber(campaign.linkClicks)}</td>
+                  <td className="px-6 py-4 text-right">{formatCurrency(campaign.cpcLink)}</td>
+                  <td className="px-6 py-4 text-right text-blue-400">{campaign.ctrLink}%</td>
+                  <td className="px-6 py-4 text-right">{formatNumber(campaign.clicksAll)}</td>
+                  <td className="px-6 py-4 text-right text-indigo-400">{campaign.ctrAll}%</td>
+                  <td className="px-6 py-4 text-right">{formatCurrency(campaign.cpcAll)}</td>
+                  <td className="px-6 py-4 text-right">{formatNumber(campaign.landingPageViews)}</td>
+                  <td className="px-6 py-4 text-right">{formatCurrency(campaign.costPerLpv)}</td>
+                  <td className="px-6 py-4 max-w-xs truncate" title={campaign.notes}>{campaign.notes}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      <Glossary />
     </div>
   );
 }

@@ -3,16 +3,17 @@
 import React, { useState } from 'react';
 import { MetaAdsDashboard } from './MetaAdsDashboard';
 import { EmailDashboard } from './EmailDashboard';
-import { MetaAdData, EmailCampaignData } from '@/lib/data';
+import { MetaAdData, EmailCampaignData, EmailSubscriberData } from '@/lib/data';
 import { BarChart3, Mail } from 'lucide-react';
 import { cn } from './ui/StatCard';
 
 interface Props {
   metaData: MetaAdData[];
   emailData: EmailCampaignData[];
+  subscriberData: EmailSubscriberData[];
 }
 
-export function DashboardTabs({ metaData, emailData }: Props) {
+export function DashboardTabs({ metaData, emailData, subscriberData }: Props) {
   const [activeTab, setActiveTab] = useState<'meta' | 'email'>('meta');
 
   return (
@@ -59,7 +60,7 @@ export function DashboardTabs({ metaData, emailData }: Props) {
         {activeTab === 'meta' ? (
           <MetaAdsDashboard data={metaData} />
         ) : (
-          <EmailDashboard data={emailData} />
+          <EmailDashboard campaignData={emailData} subscriberData={subscriberData} />
         )}
       </div>
     </div>

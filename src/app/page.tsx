@@ -1,12 +1,13 @@
-import { fetchMetaAdsData, fetchEmailData } from '@/lib/data';
+import { fetchMetaAdsData, fetchEmailCampaignData, fetchEmailSubscriberData } from '@/lib/data';
 import { DashboardTabs } from '@/components/DashboardTabs';
 
 export const revalidate = 60; // Revalidate every 60 seconds
 
 export default async function Home() {
-  const [metaData, emailData] = await Promise.all([
+  const [metaData, emailData, subscriberData] = await Promise.all([
     fetchMetaAdsData(),
-    fetchEmailData()
+    fetchEmailCampaignData(),
+    fetchEmailSubscriberData()
   ]);
 
   return (
@@ -18,8 +19,8 @@ export default async function Home() {
         <div className="absolute top-[40%] right-[10%] w-[30%] h-[30%] rounded-full bg-emerald-600/5 blur-[100px]" />
       </div>
 
-      <div className="p-4 md:p-8 lg:p-12">
-        <DashboardTabs metaData={metaData} emailData={emailData} />
+      <div className="p-4 md:p-8 lg:p-12 relative z-10">
+        <DashboardTabs metaData={metaData} emailData={emailData} subscriberData={subscriberData} />
       </div>
     </main>
   );

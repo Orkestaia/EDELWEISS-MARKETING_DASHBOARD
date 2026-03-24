@@ -1,7 +1,8 @@
 import Papa from 'papaparse';
 
 const META_ADS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTPg-tZgSaVhulvg6y-AUJsFQvEC5Q7gtQU8hBHG6IQx19pKckFhLMafKWZTeaR6A/pub?output=csv';
-const EMAIL_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vThdpRjnDv4l-2JNXF_JrLh18dp0bTlyrMxj6MKqlUrxfX6oFKxd-7oHugLSc3ZH7NBu850JDEXdzqi/pub?output=csv';
+const EMAIL_CAMPAIGNS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vThdpRjnDv4l-2JNXF_JrLh18dp0bTlyrMxj6MKqlUrxfX6oFKxd-7oHugLSc3ZH7NBu850JDEXdzqi/pub?output=csv';
+const EMAIL_SUBSCRIBERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vThdpRjnDv4l-2JNXF_JrLh18dp0bTlyrMxj6MKqlUrxfX6oFKxd-7oHugLSc3ZH7NBu850JDEXdzqi/pub?gid=847482942&single=true&output=csv';
 
 export interface MetaAdData {
   campaignName: string;
@@ -21,6 +22,7 @@ export interface MetaAdData {
   cpcAll: number;
   landingPageViews: number;
   costPerLpv: number;
+  notes: string;
 }
 
 export interface EmailCampaignData {
@@ -36,6 +38,21 @@ export interface EmailCampaignData {
   clicked: number;
   clickRate: number;
   unsubscribed: number;
+}
+
+export interface EmailSubscriberData {
+  snapshotDate: string;
+  emailsSent: number;
+  deliveredRate: number;
+  estimatedOpenersRate: number;
+  trackableOpenersRate: number;
+  uniqueClickersRate: number;
+  bouncedRate: number;
+  hardBounceRate: number;
+  softBounceRate: number;
+  complaintRate: number;
+  blockedRate: number;
+  notes: string;
 }
 
 const parseNumber = (val: string | undefined): number => {
@@ -73,6 +90,7 @@ export async function fetchMetaAdsData(): Promise<MetaAdData[]> {
           cpcAll: parseNumber(row['CPC (All) ($)']),
           landingPageViews: parseNumber(row['Landing Page Views']),
           costPerLpv: parseNumber(row['Cost per LPV ($)']),
+          notes: row['Notes'] || '',
         }));
         resolve(data);
       },
@@ -80,8 +98,8 @@ export async function fetchMetaAdsData(): Promise<MetaAdData[]> {
   });
 }
 
-export async function fetchEmailData(): Promise<EmailCampaignData[]> {
-  const res = await fetch(EMAIL_CSV_URL, { next: { revalidate: 60 } });
+export async function fetchEmailCampaignData(): Promise<EmailCampaignData[]> {
+  const res = await fetch(EMAIL_CAMPAIGNS_CSV_URL, { next: { revalidate: 60 } });
   let csvText = await res.text();
 
   // The email CSV has 6 lines of header/summary before the actual table starts.
@@ -107,11 +125,48 @@ export async function fetchEmailData(): Promise<EmailCampaignData[]> {
           delivered: parseNumber(row['Delivered']),
           deliveredRate: parseNumber(row['Delivered Rate']),
           totalOpens: parseNumber(row['Total Opens']),
-          // 'Trackable Open Rate' or 'Total Opens' / 'Delivered'
           openRate: parseNumber(row['Trackable Open Rate']), 
           clicked: parseNumber(row['Clicked']),
           clickRate: parseNumber(row['Click Rate']),
           unsubscribed: parseNumber(row['Unsubscribed']),
+        }));
+        resolve(data);
+      },
+    });
+  });
+}
+
+export async function fetchEmailSubscriberData(): Promise<EmailSubscriberData[]> {
+  const res = await fetch(EMAIL_SUBSCRIBERS_CSV_URL, { next: { revalidate: 60 } });
+  let csvText = await res.text();
+  
+  // The subscriber CSV has 6 lines of header before the actual data starts.
+  // We need to strip those lines.
+  const lines = csvText.split('\n');
+  const headerIndex = lines.findIndex(line => line.startsWith('Snapshot Date,Emails Sent,Delivered %,Estimated Openers %'));
+  
+  if (headerIndex !== -1) {
+    csvText = lines.slice(headerIndex).join('\n');
+  }
+
+  return new Promise((resolve) => {
+    Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (results) => {
+        const data = results.data.map((row: any) => ({
+          snapshotDate: row['Snapshot Date'] || '',
+          emailsSent: parseNumber(row['Emails Sent']),
+          deliveredRate: parseNumber(row['Delivered %']),
+          estimatedOpenersRate: parseNumber(row['Estimated Openers %']),
+          trackableOpenersRate: parseNumber(row['Trackable Openers %']),
+          uniqueClickersRate: parseNumber(row['Unique Clickers %']),
+          bouncedRate: parseNumber(row['Bounced %']),
+          hardBounceRate: parseNumber(row['Hard Bounce %']),
+          softBounceRate: parseNumber(row['Soft Bounce %']),
+          complaintRate: parseNumber(row['Complaint %']),
+          blockedRate: parseNumber(row['Blocked %']),
+          notes: row['Notes'] || '',
         }));
         resolve(data);
       },
