@@ -1,0 +1,9 @@
+Email Campaign Performance,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+Total Campaigns,2,Total Sent,492,Avg Delivered Rate,"96,0%",Avg Open Rate,"55,7%",Avg Click Rate,"12,9%",Total Unsubscribed,9,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+Paste future campaign rows starting on the next empty row below the table.,,,,,,,,,,,,,,,,,,,,,
+,,,,,,,,,,,,,,,,,,,,,
+Sending Date,Campaign ID,Campaign Name,Subject,Sent,Non Delivered,Hard Bounces,Soft Bounces,Delivered,Delivered Rate,Opens (Trackable),Total Opens,Apple MPP Opens,Trackable Open Rate,Clicked,Click Rate,Click-to-Open Rate,Unsubscribed,Unsub Rate,Complaints,Complaints Rate,Notes
+03-14-2026,9,001_Easter_Menu,We owed you this email.,251,12,7,5,239,"95,2%",138,235,68,"57,7%",36,"15,1%","51,4%",7,"2,9%",1,"0,4%",
+03-20-2026,10,2:00 AM _Storytelling,Before the day gets loud,241,8,1,7,233,"96,7%",125,182,67,"53,7%",25,"10,7%","43,1%",2,"0,9%",0,"0,0%",
