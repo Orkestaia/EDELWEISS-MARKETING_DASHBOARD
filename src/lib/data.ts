@@ -37,7 +37,12 @@ export interface EmailCampaignData {
   openRate: number;
   clicked: number;
   clickRate: number;
+  clickToOpenRate?: number;
   unsubscribed: number;
+  unsubRate?: number;
+  complaints?: number;
+  complaintsRate?: number;
+  appleMppOpens?: number;
 }
 
 export interface EmailSubscriberData {
@@ -52,6 +57,7 @@ export interface EmailSubscriberData {
   softBounceRate: number;
   complaintRate: number;
   blockedRate: number;
+  newSubscribers7d?: number;
   notes: string;
 }
 
@@ -125,10 +131,15 @@ export async function fetchEmailCampaignData(): Promise<EmailCampaignData[]> {
           delivered: parseNumber(row['Delivered']),
           deliveredRate: parseNumber(row['Delivered Rate']),
           totalOpens: parseNumber(row['Total Opens']),
+          appleMppOpens: parseNumber(row['Apple MPP Opens']),
           openRate: parseNumber(row['Trackable Open Rate']), 
           clicked: parseNumber(row['Clicked']),
           clickRate: parseNumber(row['Click Rate']),
+          clickToOpenRate: parseNumber(row['Click-to-Open Rate'] || row['Click-to-Open rate']),
           unsubscribed: parseNumber(row['Unsubscribed']),
+          unsubRate: parseNumber(row['Unsub Rate'] || row['Unsubscription rate']),
+          complaints: parseNumber(row['Complaints']),
+          complaintsRate: parseNumber(row['Complaints Rate'] || row['Complaints rate']),
         }));
         resolve(data);
       },
@@ -166,6 +177,7 @@ export async function fetchEmailSubscriberData(): Promise<EmailSubscriberData[]>
           softBounceRate: parseNumber(row['Soft Bounce %']),
           complaintRate: parseNumber(row['Complaint %']),
           blockedRate: parseNumber(row['Blocked %']),
+          newSubscribers7d: parseNumber(row['News suscribers 7D'] || row['News subscribers 7D']),
           notes: row['Notes'] || '',
         }));
         resolve(data);

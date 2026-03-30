@@ -124,11 +124,15 @@ export function EmailDashboard({ campaignData, subscriberData }: Props) {
                     <th className="px-6 py-4 font-medium">Date</th>
                     <th className="px-6 py-4 font-medium">Campaign Name</th>
                     <th className="px-6 py-4 font-medium text-right">Sent</th>
-                    <th className="px-6 py-4 font-medium text-right">Delivered Rate</th>
+                    <th className="px-6 py-4 font-medium text-right">Deliv. Rate</th>
                     <th className="px-6 py-4 font-medium text-right">Opens</th>
+                    <th className="px-6 py-4 font-medium text-right">Apple MPP</th>
                     <th className="px-6 py-4 font-medium text-right">Open Rate</th>
                     <th className="px-6 py-4 font-medium text-right">Clicked</th>
                     <th className="px-6 py-4 font-medium text-right">Click Rate</th>
+                    <th className="px-6 py-4 font-medium text-right">CTO Rate</th>
+                    <th className="px-6 py-4 font-medium text-right">Unsub</th>
+                    <th className="px-6 py-4 font-medium text-right">Complaints</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10 text-slate-300">
@@ -139,9 +143,13 @@ export function EmailDashboard({ campaignData, subscriberData }: Props) {
                       <td className="px-6 py-4 text-right">{formatNumber(campaign.sent)}</td>
                       <td className="px-6 py-4 text-right text-slate-300">{campaign.deliveredRate}%</td>
                       <td className="px-6 py-4 text-right">{formatNumber(campaign.totalOpens)}</td>
+                      <td className="px-6 py-4 text-right text-slate-400">{formatNumber(campaign.appleMppOpens || 0)}</td>
                       <td className="px-6 py-4 text-right text-emerald-400 font-medium">{campaign.openRate}%</td>
                       <td className="px-6 py-4 text-right">{formatNumber(campaign.clicked)}</td>
                       <td className="px-6 py-4 text-right text-blue-400 font-medium">{campaign.clickRate}%</td>
+                      <td className="px-6 py-4 text-right text-indigo-400">{campaign.clickToOpenRate || 0}%</td>
+                      <td className="px-6 py-4 text-right text-rose-400">{campaign.unsubscribed}</td>
+                      <td className="px-6 py-4 text-right text-red-500">{campaign.complaints || 0}</td>
                     </tr>
                   ))}
                   {campaignData.length === 0 && (
@@ -193,6 +201,9 @@ export function EmailDashboard({ campaignData, subscriberData }: Props) {
                     <th className="px-6 py-4 font-medium text-right">Trackable Openers %</th>
                     <th className="px-6 py-4 font-medium text-right">Unique Clickers %</th>
                     <th className="px-6 py-4 font-medium text-right">Bounced %</th>
+                    <th className="px-6 py-4 font-medium text-right">Hard/Soft B. %</th>
+                    <th className="px-6 py-4 font-medium text-right">Complaint/Block %</th>
+                    <th className="px-6 py-4 font-medium text-right">New Subs 7D</th>
                     <th className="px-6 py-4 font-medium text-center">Notes</th>
                   </tr>
                 </thead>
@@ -206,6 +217,9 @@ export function EmailDashboard({ campaignData, subscriberData }: Props) {
                       <td className="px-6 py-4 text-right text-emerald-400 font-medium">{sub.trackableOpenersRate}%</td>
                       <td className="px-6 py-4 text-right text-blue-400 font-medium">{sub.uniqueClickersRate}%</td>
                       <td className="px-6 py-4 text-right text-rose-400">{sub.bouncedRate}%</td>
+                      <td className="px-6 py-4 text-right text-rose-300">{sub.hardBounceRate}% / {sub.softBounceRate}%</td>
+                      <td className="px-6 py-4 text-right text-red-500">{sub.complaintRate}% / {sub.blockedRate}%</td>
+                      <td className="px-6 py-4 text-right text-emerald-300 font-bold">+{sub.newSubscribers7d || 0}</td>
                       <td className="px-6 py-4 text-center text-slate-400 truncate max-w-[200px]" title={sub.notes}>{sub.notes || '-'}</td>
                     </tr>
                   ))}
