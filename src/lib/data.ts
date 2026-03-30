@@ -1,8 +1,8 @@
 import Papa from 'papaparse';
 
-const META_ADS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTPg-tZgSaVhulvg6y-AUJsFQvEC5Q7gtQU8hBHG6IQx19pKckFhLMafKWZTeaR6A/pub?output=csv';
-const EMAIL_CAMPAIGNS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vThdpRjnDv4l-2JNXF_JrLh18dp0bTlyrMxj6MKqlUrxfX6oFKxd-7oHugLSc3ZH7NBu850JDEXdzqi/pub?output=csv';
-const EMAIL_SUBSCRIBERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vThdpRjnDv4l-2JNXF_JrLh18dp0bTlyrMxj6MKqlUrxfX6oFKxd-7oHugLSc3ZH7NBu850JDEXdzqi/pub?gid=847482942&single=true&output=csv';
+const META_ADS_CSV_URL = 'https://docs.google.com/spreadsheets/d/1yV-aTSES68tPit8O17e0-tJAlHssBxJqQerlXbgvhPI/export?format=csv&gid=681302842';
+const EMAIL_CAMPAIGNS_CSV_URL = 'https://docs.google.com/spreadsheets/d/1tThcq-gGpWQ2DKZbMqiRv21YkeDuZAxjZMLnmejsrss/export?format=csv&gid=254736409';
+const EMAIL_SUBSCRIBERS_CSV_URL = 'https://docs.google.com/spreadsheets/d/1tThcq-gGpWQ2DKZbMqiRv21YkeDuZAxjZMLnmejsrss/export?format=csv&gid=847482942';
 
 export interface MetaAdData {
   campaignName: string;
