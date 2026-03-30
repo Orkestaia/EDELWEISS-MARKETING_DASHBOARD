@@ -64,7 +64,7 @@ const parseNumber = (val: string | undefined): number => {
 };
 
 export async function fetchMetaAdsData(): Promise<MetaAdData[]> {
-  const res = await fetch(META_ADS_CSV_URL, { next: { revalidate: 60 } });
+  const res = await fetch(META_ADS_CSV_URL, { cache: 'no-store' });
   const csvText = await res.text();
 
   return new Promise((resolve) => {
@@ -99,7 +99,7 @@ export async function fetchMetaAdsData(): Promise<MetaAdData[]> {
 }
 
 export async function fetchEmailCampaignData(): Promise<EmailCampaignData[]> {
-  const res = await fetch(EMAIL_CAMPAIGNS_CSV_URL, { next: { revalidate: 60 } });
+  const res = await fetch(EMAIL_CAMPAIGNS_CSV_URL, { cache: 'no-store' });
   let csvText = await res.text();
 
   // The email CSV has 6 lines of header/summary before the actual table starts.
@@ -137,7 +137,7 @@ export async function fetchEmailCampaignData(): Promise<EmailCampaignData[]> {
 }
 
 export async function fetchEmailSubscriberData(): Promise<EmailSubscriberData[]> {
-  const res = await fetch(EMAIL_SUBSCRIBERS_CSV_URL, { next: { revalidate: 60 } });
+  const res = await fetch(EMAIL_SUBSCRIBERS_CSV_URL, { cache: 'no-store' });
   let csvText = await res.text();
   
   // The subscriber CSV has 6 lines of header before the actual data starts.

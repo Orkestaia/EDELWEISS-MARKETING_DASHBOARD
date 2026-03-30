@@ -1,7 +1,7 @@
 import { fetchMetaAdsData, fetchEmailCampaignData, fetchEmailSubscriberData } from '@/lib/data';
 import { DashboardTabs } from '@/components/DashboardTabs';
 
-export const revalidate = 60; // Revalidate every 60 seconds
+export const dynamic = 'force-dynamic'; // Always fetch the latest data on request
 
 export default async function Home() {
   const [metaData, emailData, subscriberData] = await Promise.all([
