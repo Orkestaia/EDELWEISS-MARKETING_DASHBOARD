@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Edelweiss Marketing Studio
 
-## Getting Started
+Centro operativo de marketing de Edelweiss Pastry Shop (Biddeford, Maine), construido con Next.js 16. Incluye calendario editorial, solicitudes de material para el equipo, Meta Ads y email marketing.
 
-First, run the development server:
+## Funcionalidad
+
+- Content Calendar mensual y semanal con filtros, ficha completa y acciones de crear, editar, duplicar, reprogramar y eliminar.
+- Plan editorial de septiembre de 2026: 2 publicaciones de feed y 2–3 Stories por semana, con reutilización de material.
+- `What we need from Edelweiss`: solicitudes sencillas pensadas para una sesión de 20–30 minutos cada dos semanas, sin exposición innecesaria.
+- Campañas `5,000 Followers Giveaway`, `Three Days Inside a Croissant`, contenido de comunidad, herencia suiza, otoño, backstage, wholesale, Surprise Bags y futura serie `The Edelweiss Story`.
+- Adaptadores server-only para Brevo y Meta Insights, Sheets como fallback temporal, sincronización manual y cron diario.
+- Los secretos solo se leen en servidor y nunca deben incluirse en Git.
+
+## Desarrollo
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Persistencia del calendario
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+El CRUD usa Redis compatible con la API REST de Upstash/Vercel Marketplace. Sin estas variables, se muestra el calendario editorial versionado en modo lectura y la interfaz indica `configuración pendiente`; nunca utiliza `localStorage`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+KV_REST_API_URL=             # o UPSTASH_REDIS_REST_URL
+KV_REST_API_TOKEN=           # o UPSTASH_REDIS_REST_TOKEN
+```
 
-## Learn More
+En Vercel: Storage/Marketplace → Upstash Redis → Connect Project → habilitar Preview y Production. No expongas estas variables con el prefijo `NEXT_PUBLIC_`.
 
-To learn more about Next.js, take a look at the following resources:
+## Brevo
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Variables:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```text
+BREVO_API_KEY=
+```
 
-## Deploy on Vercel
+Crear una API key dedicada en Brevo → SMTP & API → API Keys. La integración solo necesita lectura de campañas y estadísticas (`GET /v3/emailCampaigns`): enviados, entregados, aperturas y clics únicos, rebotes, bajas y quejas. Rota la key si se comparte fuera de Vercel.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Meta Marketing API
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Variables:
+
+```text
+META_ACCESS_TOKEN=
+META_AD_ACCOUNT_ID=          # número o act_123; ambos se aceptan
+META_API_VERSION=v23.0       # fijar la versión aprobada en Meta
+```
+
+Conectar mediante Meta Business Manager/OAuth o un System User de Business Manager. Nunca usar ni solicitar la contraseña personal de Facebook. Asignar únicamente la cuenta publicitaria de Edelweiss y permisos mínimos:
+
+- `ads_read` para Insights.
+- `business_management` solo si el flujo de Business Manager lo exige para descubrir/asignar activos.
+
+La app consulta Insights por campaña y prepara gasto, alcance, impresiones, frecuencia, CPM, clics, CTR, CPC, resultados y coste por resultado. Para desglose por conjunto/anuncio se reutiliza el adaptador cambiando `level` a `adset` o `ad`; no se almacenan tokens en el cliente.
+
+## Sincronización
+
+- `POST /api/sync`: botón `Sync now`; hace hasta 3 intentos y devuelve fuente, hora, intentos y error legible por integración.
+- `GET /api/sync?history=1`: últimas 30 sincronizaciones cuando Redis está conectado.
+- `GET /api/cron/sync`: ejecución diaria a las 10:15 UTC definida en `vercel.json`.
+- `CRON_SECRET`: Vercel lo envía como `Authorization: Bearer ...` al cron.
+- Mientras falten credenciales, Brevo y Meta muestran configuración pendiente y Sheets continúa como fallback. No se generan métricas ficticias.
+
+Variables:
+
+```text
+CRON_SECRET=                 # cadena aleatoria larga, solo servidor
+```
+
+## Despliegue seguro
+
+1. Configurar las variables en Preview.
+2. Desplegar una preview y validar calendario, fichas, edición, `What we need`, sincronización y responsive.
+3. Repetir las variables en Production solo tras validar.
+4. Promover exactamente el artefacto validado con `vercel promote <preview-url>`.
+5. Revisar logs de funciones después de la promoción.
+
+El proyecto Vercel autorizado es `prj_fkRlAC7VvWH76mrx1v32vQHQxofN`. La producción actual es <https://edelweiss-marketing-dashboard.vercel.app/>.
+
+## Medios del sorteo
+
+Los medios permanecen fuera del repo en:
+
+```text
+C:\STUDIOS-MEDIA\social\clientes\edelweiss\deliverables\2026-08-28-giveaway-5000
+```
+
+La ficha del calendario conserva la referencia. No se copian archivos pesados al repositorio.
