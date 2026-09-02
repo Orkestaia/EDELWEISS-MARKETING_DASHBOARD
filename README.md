@@ -7,6 +7,7 @@ Centro operativo de marketing de Edelweiss Pastry Shop (Biddeford, Maine), const
 - Content Calendar mensual y semanal con filtros, ficha completa y acciones de crear, editar, duplicar, reprogramar y eliminar.
 - Plan editorial de septiembre de 2026: 2 publicaciones de feed y 2–3 Stories por semana, con reutilización de material.
 - `What we need from Edelweiss`: solicitudes sencillas pensadas para una sesión de 20–30 minutos cada dos semanas, sin exposición innecesaria.
+- `Orders & requests`: pedidos web, encargos especiales y leads wholesale alimentados en tiempo real por n8n.
 - Campañas `5,000 Followers Giveaway`, `Three Days Inside a Croissant`, contenido de comunidad, herencia suiza, otoño, backstage, wholesale, Surprise Bags y futura serie `The Edelweiss Story`.
 - Adaptadores server-only para Brevo y Meta Insights, Sheets como fallback temporal, sincronización manual y cron diario.
 - Los secretos solo se leen en servidor y nunca deben incluirse en Git.
@@ -19,6 +20,17 @@ npm run dev
 npm run lint
 npm run build
 ```
+
+## Acceso privado obligatorio
+
+`Orders & requests` contiene nombres y datos de contacto. En Vercel la aplicación falla de forma segura con `503` hasta configurar credenciales de acceso. Añadir en Preview y Production:
+
+```text
+DASHBOARD_BASIC_USER=
+DASHBOARD_BASIC_PASSWORD=    # contraseña larga y exclusiva del dashboard
+```
+
+No reutilizar la contraseña de Facebook, email ni ninguna cuenta personal. El cron queda fuera de Basic Auth porque ya exige `CRON_SECRET`.
 
 ## Persistencia del calendario
 
@@ -40,6 +52,18 @@ BREVO_API_KEY=
 ```
 
 Crear una API key dedicada en Brevo → SMTP & API → API Keys. La integración solo necesita lectura de campañas y estadísticas (`GET /v3/emailCampaigns`): enviados, entregados, aperturas y clics únicos, rebotes, bajas y quejas. Rota la key si se comparte fuera de Vercel.
+
+## Google Sheet operativo definitivo
+
+El fallback y los datos operativos usan exclusivamente [este Google Sheet](https://docs.google.com/spreadsheets/d/1Y0U5fpS8AnCU0iiQELSVyBxCHYbxMNrbeiJmaF4V77I/edit). Los nombres reales se respetan, incluidos sus espacios:
+
+- `PRE_Orders ` (`gid=27254474`): pedidos añadidos automáticamente por n8n.
+- `Special Orders` (`gid=1454652480`): encargos y eventos.
+- ` Wholesale Inquiries` (`gid=150858658`): oportunidades wholesale.
+- `Edelweiss-ADS-Campaigns-Aug-3-2026-Sep-1-2026` (`gid=341991106`): reporte temporal de Meta Ads.
+- `Brevo` (`gid=651168549`): campañas, métricas y eventos de suscriptor/cumpleaños normalizados para n8n.
+
+La pestaña `Brevo` usa `record_type=campaign` para envíos de los viernes y `record_type=subscriber` para altas o actualizaciones de contactos. Los booleanos `new_subscriber` y `birthday_provided` permiten construir métricas diarias sin guardar lógica en el dashboard.
 
 ## Meta Marketing API
 
