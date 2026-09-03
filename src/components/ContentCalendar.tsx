@@ -7,7 +7,7 @@ import { CONTENT_FORMATS, CONTENT_OWNERS, CONTENT_STATUSES, type ContentItem } f
 const fmt = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'short' });
 const statusTone: Record<string, string> = { publicado: 'status published', aprobado: 'status approved', revisión: 'status review', edición: 'status editing', 'material recibido': 'status material', 'pendiente de grabación': 'status recording', idea: 'status idea' };
 const statusLabel: Record<string, string> = { publicado: 'Published', aprobado: 'Approved', revisión: 'In review', edición: 'Editing', 'material recibido': 'Assets received', 'pendiente de grabación': 'Waiting to film', idea: 'Idea' };
-const formatLabel: Record<string, string> = { Carrusel: 'Carousel', Reel: 'Reel', Story: 'Story', Post: 'Post' };
+const formatLabel: Record<string, string> = { Carrusel: 'Carousel', Anuncio: 'Ad', Reel: 'Reel', Story: 'Story', Post: 'Post', Email: 'Email' };
 const empty: ContentItem = { id: '', title: '', scheduledAt: '2026-09-01T10:00', platforms: ['Instagram'], format: 'Reel', campaign: '', objective: '', owner: 'Aitor', status: 'idea', priority: 'media', hook: '', idea: '', script: '', copy: '', cta: '', shotList: '', instructions: '', fileLinks: [], driveLink: '', notes: '', publishedAt: '', metrics: '' };
 
 export function ContentCalendar({ initialItems, persistence }: { initialItems: ContentItem[]; persistence: 'redis' | 'seed' }) {
