@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
@@ -17,6 +17,20 @@ interface Props {
 
 export function EmailDashboard({ campaignData, subscriberData }: Props) {
   const [activeView, setActiveView] = useState<'campaigns' | 'subscribers'>('campaigns');
+  const [subscriberPeriod, setSubscriberPeriod] = useState('30d');
+  const [subscriberFrom, setSubscriberFrom] = useState('');
+  const [subscriberTo, setSubscriberTo] = useState('');
+  const filteredSubscribers = useMemo(() => {
+    const today = new Date(); const end = today.toISOString().slice(0, 10); const start = new Date(today);
+    if (subscriberPeriod === '7d') start.setDate(today.getDate() - 6);
+    if (subscriberPeriod === '30d') start.setDate(today.getDate() - 29);
+    if (subscriberPeriod === '90d') start.setDate(today.getDate() - 89);
+    if (subscriberPeriod === 'month') start.setDate(1);
+    const startDate = subscriberPeriod === 'custom' ? subscriberFrom : subscriberPeriod === 'all' ? '' : start.toISOString().slice(0, 10);
+    const endDate = subscriberPeriod === 'custom' ? subscriberTo : subscriberPeriod === 'all' ? '' : end;
+    return subscriberData.filter(row => (!startDate || row.snapshotDate >= startDate) && (!endDate || row.snapshotDate <= endDate));
+  }, [subscriberData, subscriberPeriod, subscriberFrom, subscriberTo]);
+  const newSubscribersInPeriod = filteredSubscribers.reduce((sum, row) => sum + (row.newSubscribers ?? row.newSubscribers7d ?? 0), 0);
 
   // Campaigns Aggregates
   const totalSent = campaignData.reduce((acc, curr) => acc + curr.sent, 0);
@@ -168,7 +182,13 @@ export function EmailDashboard({ campaignData, subscriberData }: Props) {
 
       {activeView === 'subscribers' && (
         <div className="space-y-8 animate-in duration-500 fade-in slide-in-from-bottom-4">
+          <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <label className="text-sm text-slate-300">Signup period</label>
+            <select aria-label="Subscriber signup date range" value={subscriberPeriod} onChange={event => setSubscriberPeriod(event.target.value)} className="rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100"><option value="7d">Last 7 days</option><option value="30d">Last 30 days</option><option value="90d">Last 90 days</option><option value="month">This month</option><option value="all">All time</option><option value="custom">Custom range</option></select>
+            {subscriberPeriod === 'custom' && <><input aria-label="Subscriber start date" type="date" value={subscriberFrom} onChange={event => setSubscriberFrom(event.target.value)} className="rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100"/><input aria-label="Subscriber end date" type="date" value={subscriberTo} onChange={event => setSubscriberTo(event.target.value)} className="rounded-lg border border-white/10 bg-slate-900 px-3 py-2 text-sm text-slate-100"/></>}
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard title="New Subscribers in Period" value={`+${formatNumber(newSubscribersInPeriod)}`} icon={<Users className="w-6 h-6 text-cyan-400" />} />
             <StatCard title="Active Subscribers" value={formatNumber(latestSnapshot?.totalSubscribers || 0)} icon={<Users className="w-6 h-6 text-emerald-400" />} />
             <StatCard title="Birthdays Collected" value={formatNumber(latestSnapshot?.birthdaysProvided || 0)} icon={<Users className="w-6 h-6 text-amber-400" />} />
              <StatCard 
@@ -188,6 +208,26 @@ export function EmailDashboard({ campaignData, subscriberData }: Props) {
             />
           </div>
 
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-slate-100">Newsletter Signup Growth</h3>
+              <p className="mt-1 text-sm text-slate-400">New contacts by Brevo creation date and cumulative active subscribers.</p>
+            </div>
+            <div className="h-80 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={filteredSubscribers} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#ffffff1a" vertical={false} />
+                  <XAxis dataKey="snapshotDate" stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#94a3b8" tick={{ fill: '#94a3b8', fontSize: 12 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px' }} itemStyle={{ color: '#e2e8f0' }} />
+                  <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                  <Area type="monotone" name="Active subscribers" dataKey="totalSubscribers" stroke="#10b981" fill="#10b981" fillOpacity={0.18} strokeWidth={3} />
+                  <Area type="monotone" name="New signups" dataKey="newSubscribers" stroke="#22d3ee" fill="#22d3ee" fillOpacity={0.14} strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
           <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden backdrop-blur-md">
             <div className="p-6 border-b border-white/10">
               <h3 className="text-xl font-semibold text-slate-100">Welcome Automation Snapshots</h3>
@@ -205,12 +245,12 @@ export function EmailDashboard({ campaignData, subscriberData }: Props) {
                     <th className="px-6 py-4 font-medium text-right">Bounced %</th>
                     <th className="px-6 py-4 font-medium text-right">Hard/Soft B. %</th>
                     <th className="px-6 py-4 font-medium text-right">Complaint/Block %</th>
-                    <th className="px-6 py-4 font-medium text-right">New Subs 7D</th>
+                    <th className="px-6 py-4 font-medium text-right">New Signups</th>
                     <th className="px-6 py-4 font-medium text-center">Notes</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/10 text-slate-300">
-                  {subscriberData.map((sub, i) => (
+                  {filteredSubscribers.slice().reverse().map((sub, i) => (
                     <tr key={i} className="hover:bg-white/5 transition-colors">
                       <td className="px-6 py-4 text-slate-400">{sub.snapshotDate}</td>
                       <td className="px-6 py-4 text-right">{formatNumber(sub.emailsSent)}</td>
@@ -221,7 +261,7 @@ export function EmailDashboard({ campaignData, subscriberData }: Props) {
                       <td className="px-6 py-4 text-right text-rose-400">{sub.bouncedRate}%</td>
                       <td className="px-6 py-4 text-right text-rose-300">{sub.hardBounceRate}% / {sub.softBounceRate}%</td>
                       <td className="px-6 py-4 text-right text-red-500">{sub.complaintRate}% / {sub.blockedRate}%</td>
-                      <td className="px-6 py-4 text-right text-emerald-300 font-bold">+{sub.newSubscribers7d || 0}</td>
+                      <td className="px-6 py-4 text-right text-emerald-300 font-bold">+{sub.newSubscribers ?? sub.newSubscribers7d ?? 0}</td>
                       <td className="px-6 py-4 text-center text-slate-400 truncate max-w-[200px]" title={sub.notes}>{sub.notes || '-'}</td>
                     </tr>
                   ))}

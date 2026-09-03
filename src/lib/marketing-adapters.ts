@@ -29,10 +29,25 @@ export async function fetchBrevoSubscribers(): Promise<EmailSubscriberData[]> {
     const payload = await response.json() as { contacts?: BrevoContact[]; count?: number };
     contacts.push(...(payload.contacts || [])); total = Number(payload.count || contacts.length); offset += 500;
   } while (contacts.length < total && offset < 10000);
-  const sevenDaysAgo = Date.now() - 7 * 86400000; const birthdayAttribute = process.env.BREVO_BIRTHDAY_ATTRIBUTE || 'DOB';
+  const birthdayAttribute = process.env.BREVO_BIRTHDAY_ATTRIBUTE || 'DOB';
   const active = contacts.filter(contact => !contact.emailBlacklisted);
-  const birthdays = active.filter(contact => Boolean(contact.attributes?.[birthdayAttribute])).length;
-  return [{ snapshotDate: new Date().toISOString().slice(0, 10), emailsSent: 0, deliveredRate: 0, estimatedOpenersRate: 0, trackableOpenersRate: 0, uniqueClickersRate: 0, bouncedRate: 0, hardBounceRate: 0, softBounceRate: 0, complaintRate: 0, blockedRate: 0, newSubscribers7d: active.filter(contact => new Date(contact.createdAt || 0).getTime() >= sevenDaysAgo).length, totalSubscribers: active.length, birthdaysProvided: birthdays, notes: `${birthdays} contacts with ${birthdayAttribute}; ${total} contacts scanned` }];
+  const byDate = new Map<string, { subscribers: number; birthdays: number }>();
+  active.forEach(contact => {
+    const date = String(contact.createdAt || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const day = byDate.get(date) || { subscribers: 0, birthdays: 0 };
+    day.subscribers += 1;
+    if (contact.attributes?.[birthdayAttribute]) day.birthdays += 1;
+    byDate.set(date, day);
+  });
+  let cumulativeSubscribers = active.length - [...byDate.values()].reduce((sum, day) => sum + day.subscribers, 0);
+  let cumulativeBirthdays = active.filter(contact => Boolean(contact.attributes?.[birthdayAttribute]) && !/^\d{4}-\d{2}-\d{2}$/.test(String(contact.createdAt || '').slice(0, 10))).length;
+  return [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, day], index, days) => {
+    cumulativeSubscribers += day.subscribers; cumulativeBirthdays += day.birthdays;
+    const sevenDayStart = Math.max(0, index - 6);
+    const newSubscribers7d = days.slice(sevenDayStart, index + 1).reduce((sum, [, entry]) => sum + entry.subscribers, 0);
+    return { snapshotDate: date, emailsSent: 0, deliveredRate: 0, estimatedOpenersRate: 0, trackableOpenersRate: 0, uniqueClickersRate: 0, bouncedRate: 0, hardBounceRate: 0, softBounceRate: 0, complaintRate: 0, blockedRate: 0, newSubscribers: day.subscribers, newSubscribers7d, totalSubscribers: cumulativeSubscribers, birthdaysProvided: cumulativeBirthdays, notes: `${day.birthdays} new contacts with ${birthdayAttribute}` };
+  });
 }
 
 export async function fetchMetaInsights(): Promise<MetaAdData[]> {

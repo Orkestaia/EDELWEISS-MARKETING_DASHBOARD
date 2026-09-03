@@ -75,6 +75,7 @@ export interface EmailSubscriberData {
   complaintRate: number;
   blockedRate: number;
   newSubscribers7d?: number;
+  newSubscribers?: number;
   totalSubscribers?: number;
   birthdaysProvided?: number;
   notes: string;
@@ -87,8 +88,11 @@ export interface OrdersAndRequestsData { orders: OrderData[]; specialOrders: Spe
 
 const parseNumber = (val: string | undefined): number => {
   if (!val) return 0;
-  // Handle European format "35,22" -> 35.22 and remove % signs
-  const cleaned = val.replace('%', '').replace(',', '.').trim();
+  // Accept currency symbols and both decimal conventions from Sheets exports.
+  const raw = val.replace(/[^\d,.-]/g, '').trim();
+  const cleaned = raw.includes(',') && raw.includes('.')
+    ? (raw.lastIndexOf(',') > raw.lastIndexOf('.') ? raw.replace(/\./g, '').replace(',', '.') : raw.replace(/,/g, ''))
+    : raw.replace(',', '.');
   const num = parseFloat(cleaned);
   return isNaN(num) ? 0 : num;
 };
