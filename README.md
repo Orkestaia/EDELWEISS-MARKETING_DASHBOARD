@@ -45,6 +45,8 @@ En Vercel: Storage/Marketplace → Upstash Redis → Connect Project → habilit
 
 ## Brevo
 
+The dashboard reads Brevo directly when `BREVO_API_KEY` is configured in Vercel. Set `BREVO_LIST_ID` to restrict subscriber metrics to the definitive newsletter list and optionally `BREVO_BIRTHDAY_ATTRIBUTE` if the birthday field is not named `DOB`. Campaign and contact requests run server-side; the API key is never exposed to the browser. When the API is unavailable, the `Brevo` Sheet tab remains the fallback.
+
 Variables:
 
 ```text

@@ -1,19 +1,38 @@
 import 'server-only';
-import type { EmailCampaignData, MetaAdData } from './data';
+import type { EmailCampaignData, EmailSubscriberData, MetaAdData } from './data';
 
 export interface AdapterResult<T> { source: 'api' | 'sheets' | 'pending'; data: T[]; error?: string; }
 
 export async function fetchBrevoCampaigns(): Promise<EmailCampaignData[]> {
   const key = process.env.BREVO_API_KEY;
   if (!key) throw new Error('BREVO_NOT_CONFIGURED');
-  const response = await fetch('https://api.brevo.com/v3/emailCampaigns?limit=100&sort=desc', { headers: { 'api-key': key, accept: 'application/json' }, cache: 'no-store' });
+  const response = await fetch('https://api.brevo.com/v3/emailCampaigns?limit=100&sort=desc&status=sent&statistics=globalStats', { headers: { 'api-key': key, accept: 'application/json' }, cache: 'no-store' });
   if (!response.ok) throw new Error(`BREVO_${response.status}`);
   const payload = await response.json() as { campaigns?: Array<Record<string, unknown>> };
   return (payload.campaigns || []).map((campaign) => {
-    const stats = (campaign.statistics || {}) as Record<string, number>;
+    const statistics = (campaign.statistics || {}) as Record<string, unknown>;
+    const stats = (statistics.globalStats || (statistics.campaignStats as Array<Record<string, number>> | undefined)?.[0] || statistics) as Record<string, number>;
     const sent = Number(stats.sent || 0); const delivered = Math.max(0, sent - Number(stats.hardBounces || 0) - Number(stats.softBounces || 0));
     return { sendingDate: String(campaign.sentDate || campaign.scheduledAt || ''), campaignId: String(campaign.id || ''), campaignName: String(campaign.name || ''), subject: String(campaign.subject || ''), sent, delivered, deliveredRate: sent ? delivered / sent * 100 : 0, totalOpens: Number(stats.uniqueViews || stats.viewed || 0), openRate: delivered ? Number(stats.uniqueViews || 0) / delivered * 100 : 0, clicked: Number(stats.uniqueClicks || 0), clickRate: delivered ? Number(stats.uniqueClicks || 0) / delivered * 100 : 0, unsubscribed: Number(stats.unsubscriptions || 0), complaints: Number(stats.complaints || 0) };
   });
+}
+
+type BrevoContact = { createdAt?: string; emailBlacklisted?: boolean; attributes?: Record<string, unknown> };
+
+export async function fetchBrevoSubscribers(): Promise<EmailSubscriberData[]> {
+  const key = process.env.BREVO_API_KEY; if (!key) throw new Error('BREVO_NOT_CONFIGURED');
+  const listId = process.env.BREVO_LIST_ID; const contacts: BrevoContact[] = []; let offset = 0; let total = 0;
+  do {
+    const path = listId ? `/contacts/lists/${listId}/contacts` : '/contacts';
+    const response = await fetch(`https://api.brevo.com/v3${path}?limit=500&offset=${offset}&sort=desc`, { headers: { 'api-key': key, accept: 'application/json' }, cache: 'no-store' });
+    if (!response.ok) throw new Error(`BREVO_CONTACTS_${response.status}`);
+    const payload = await response.json() as { contacts?: BrevoContact[]; count?: number };
+    contacts.push(...(payload.contacts || [])); total = Number(payload.count || contacts.length); offset += 500;
+  } while (contacts.length < total && offset < 10000);
+  const sevenDaysAgo = Date.now() - 7 * 86400000; const birthdayAttribute = process.env.BREVO_BIRTHDAY_ATTRIBUTE || 'DOB';
+  const active = contacts.filter(contact => !contact.emailBlacklisted);
+  const birthdays = active.filter(contact => Boolean(contact.attributes?.[birthdayAttribute])).length;
+  return [{ snapshotDate: new Date().toISOString().slice(0, 10), emailsSent: 0, deliveredRate: 0, estimatedOpenersRate: 0, trackableOpenersRate: 0, uniqueClickersRate: 0, bouncedRate: 0, hardBounceRate: 0, softBounceRate: 0, complaintRate: 0, blockedRate: 0, newSubscribers7d: active.filter(contact => new Date(contact.createdAt || 0).getTime() >= sevenDaysAgo).length, totalSubscribers: active.length, birthdaysProvided: birthdays, notes: `${birthdays} contacts with ${birthdayAttribute}; ${total} contacts scanned` }];
 }
 
 export async function fetchMetaInsights(): Promise<MetaAdData[]> {

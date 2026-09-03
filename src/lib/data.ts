@@ -75,6 +75,8 @@ export interface EmailSubscriberData {
   complaintRate: number;
   blockedRate: number;
   newSubscribers7d?: number;
+  totalSubscribers?: number;
+  birthdaysProvided?: number;
   notes: string;
 }
 

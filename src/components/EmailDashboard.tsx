@@ -169,6 +169,8 @@ export function EmailDashboard({ campaignData, subscriberData }: Props) {
       {activeView === 'subscribers' && (
         <div className="space-y-8 animate-in duration-500 fade-in slide-in-from-bottom-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <StatCard title="Active Subscribers" value={formatNumber(latestSnapshot?.totalSubscribers || 0)} icon={<Users className="w-6 h-6 text-emerald-400" />} />
+            <StatCard title="Birthdays Collected" value={formatNumber(latestSnapshot?.birthdaysProvided || 0)} icon={<Users className="w-6 h-6 text-amber-400" />} />
              <StatCard 
               title="Recent Welcome Emails Sent" 
               value={latestSnapshot ? formatNumber(latestSnapshot.emailsSent) : "0"} 
