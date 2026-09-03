@@ -210,11 +210,22 @@ export async function fetchEmailSubscriberData(): Promise<EmailSubscriberData[]>
 
 async function parseRows(url: string): Promise<Record<string, string>[]> { const text = await loadCsv(url); if (!text) return []; const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true }); return parsed.data; }
 
+const normalizeOrderDate = (value: string | undefined): string => {
+  const raw = String(value || '').trim(); if (!raw) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+  const match = raw.match(/([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/); if (!match) return '';
+  const months = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+  const month = months.indexOf(match[1].toLowerCase()); if (month < 0) return '';
+  return `${match[3]}-${String(month + 1).padStart(2, '0')}-${String(Number(match[2])).padStart(2, '0')}`;
+};
+
 export async function fetchOrdersAndRequestsData(): Promise<OrdersAndRequestsData> {
   const [ordersRows, specialRows, wholesaleRows] = await Promise.all([parseRows(ORDERS_CSV_URL), parseRows(SPECIAL_ORDERS_CSV_URL), parseRows(WHOLESALE_CSV_URL)]);
+  const normalizedOrders = ordersRows.map(row => ({ orderId: row.order_id || '', receivedAt: row.received_at || '', pickupDate: normalizeOrderDate(row.pickup_date), pickupTime: row.pickup_time || '', customerName: row.customer_name || '', customerEmail: row.customer_email || '', customerPhone: row.customer_phone || '', items: row.items || '', totalUsd: parseNumber(row.total_usd), notes: row.notes || '', state: row.clover_state || '', isTest: String(row.is_likely_test).toLowerCase() === 'true' }));
+  const uniqueOrders = [...normalizedOrders.reduce((byId, order) => { const key = order.orderId || `row-${byId.size}`; const current = byId.get(key); const completeness = (entry: OrderData) => [entry.pickupDate, entry.items, entry.customerEmail, entry.customerPhone].filter(Boolean).length; if (!current || completeness(order) >= completeness(current)) byId.set(key, order); return byId; }, new Map<string, OrderData>()).values()];
   return {
-    orders: ordersRows.map(row => ({ orderId: row.order_id || '', receivedAt: row.received_at || '', pickupDate: row.pickup_date || '', pickupTime: row.pickup_time || '', customerName: row.customer_name || '', customerEmail: row.customer_email || '', customerPhone: row.customer_phone || '', items: row.items || '', totalUsd: parseNumber(row.total_usd), notes: row.notes || '', state: row.clover_state || '', isTest: String(row.is_likely_test).toLowerCase() === 'true' })),
-    specialOrders: specialRows.map(row => ({ receivedAt: row.received_at || '', name: row.name || '', email: row.email || '', phone: row.phone || '', eventType: row.event_type || '', eventDate: row.event_date || '', guests: parseNumber(row.guests_approx), message: row.message || '' })),
+    orders: uniqueOrders,
+    specialOrders: specialRows.map(row => ({ receivedAt: row.received_at || '', name: row.name || '', email: row.email || '', phone: row.phone || '', eventType: row.event_type || '', eventDate: normalizeOrderDate(row.event_date), guests: parseNumber(row.guests_approx), message: row.message || '' })),
     wholesale: wholesaleRows.map(row => ({ receivedAt: row.received_at || '', businessName: row.business_name || '', contactName: row.contact_name || '', email: row.email || '', phone: row.phone || '', businessType: row.business_type || '', message: row.message || '', qualityNote: row.data_quality_note || '' })),
   };
 }
