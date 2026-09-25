@@ -118,7 +118,7 @@ export function MetaAdsDashboard({ data }: Props) {
                 <Tooltip 
                   cursor={{ fill: '#ffffff0a' }}
                   contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px' }}
-                  formatter={(value: any, name: any) => [`$${Number(value).toFixed(2)}`, name]}
+                  formatter={(value, name) => [`$${Number(value ?? 0).toFixed(2)}`, String(name ?? "")]}
                 />
                 <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
                 <Bar name="Cost per Result" dataKey="costPerResult" fill="#10b981" radius={[4, 4, 0, 0]} barSize={20} />
