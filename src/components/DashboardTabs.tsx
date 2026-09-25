@@ -1,68 +1,10 @@
 "use client";
-
-import React, { useState } from 'react';
-import { MetaAdsDashboard } from './MetaAdsDashboard';
-import { EmailDashboard } from './EmailDashboard';
-import { MetaAdData, EmailCampaignData, EmailSubscriberData } from '@/lib/data';
-import { BarChart3, Mail } from 'lucide-react';
-import { cn } from './ui/StatCard';
-
-interface Props {
-  metaData: MetaAdData[];
-  emailData: EmailCampaignData[];
-  subscriberData: EmailSubscriberData[];
-}
-
-export function DashboardTabs({ metaData, emailData, subscriberData }: Props) {
-  const [activeTab, setActiveTab] = useState<'meta' | 'email'>('meta');
-
-  return (
-    <div className="w-full max-w-7xl mx-auto">
-      {/* Header and Tabs */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-6 border-b border-white/10 gap-6">
-        <div>
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-purple-300">
-            Edelweiss Marketing
-          </h1>
-          <p className="text-slate-400 mt-2">Interactive Performance Dashboard</p>
-        </div>
-        
-        <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-md">
-          <button
-            onClick={() => setActiveTab('meta')}
-            className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300",
-              activeTab === 'meta' 
-                ? "bg-indigo-500/20 text-indigo-300 shadow-[0_0_15px_rgba(99,102,241,0.2)]" 
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-            )}
-          >
-            <BarChart3 className="w-4 h-4" />
-            Meta Ads
-          </button>
-          <button
-            onClick={() => setActiveTab('email')}
-            className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-300",
-              activeTab === 'email' 
-                ? "bg-purple-500/20 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]" 
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-            )}
-          >
-            <Mail className="w-4 h-4" />
-            Email Marketing
-          </button>
-        </div>
-      </div>
-
-      {/* Dynamic Content */}
-      <div className="min-h-[600px]">
-        {activeTab === 'meta' ? (
-          <MetaAdsDashboard data={metaData} />
-        ) : (
-          <EmailDashboard campaignData={emailData} subscriberData={subscriberData} />
-        )}
-      </div>
-    </div>
-  );
-}
+import { SwissPassport } from "./SwissPassport";
+import { useState } from "react";
+import { BarChart3, CalendarDays, Camera, Mail, RefreshCw, ShoppingBag, Sparkles } from "lucide-react";
+import { MetaAdsDashboard } from "./MetaAdsDashboard"; import { BrevoDashboard } from "./BrevoDashboard"; import { ContentCalendar } from "./ContentCalendar"; import { InstagramDashboard } from "./InstagramDashboard"; import { SyncCenter } from "./SyncCenter";
+import type { MetaAdData,EmailCampaignData,EmailSubscriberData } from "@/lib/data"; import type { BrevoAnalytics,Campaign,ContentItem,InstagramAnalytics,SyncStatus } from "@/lib/content-types";
+import type { OperationsOverview } from "@/lib/content-types"; import { OperationsInbox } from "./OperationsInbox";
+interface Props{metaData:MetaAdData[];emailData:EmailCampaignData[];subscriberData:EmailSubscriberData[];content:ContentItem[];campaigns:Campaign[];syncStatuses:SyncStatus[];instagram:InstagramAnalytics;brevo:BrevoAnalytics;operations:OperationsOverview;persistent:boolean}
+export function DashboardTabs(p:Props){const [tab,setTab]=useState("calendar");const nav=[["passport","Swiss Passport",Sparkles],["calendar","Content Calendar",CalendarDays],["operations","Orders & requests",ShoppingBag],["instagram","Instagram",Camera],["meta","Meta Ads",BarChart3],["email","Brevo",Mail],["sync","Data sync",RefreshCw]] as const;return <div className="mx-auto min-h-screen max-w-[1600px] lg:grid lg:grid-cols-[250px_1fr] lg:gap-8"><aside className="mb-5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:py-8"><div className="mb-6 flex items-center gap-3 px-2"><div className="grid h-11 w-11 place-items-center rounded-full bg-[var(--gold)] text-[var(--forest)]"><Sparkles size={20}/></div><div><p className="font-serif text-xl leading-none">Edelweiss</p><p className="mt-1 text-[10px] uppercase tracking-[.24em] text-[var(--muted)]">Marketing atelier</p></div></div><nav className="no-scrollbar flex gap-2 overflow-x-auto pb-2 lg:flex-col">{nav.map(([id,label,Icon])=><button key={id} onClick={()=>setTab(id)} className={`nav-button ${tab===id?"nav-button-active":""}`}><Icon size={18}/><span>{label}</span></button>)}</nav><form action="/api/auth/logout" method="post"><button className="text-button mt-3">Sign out</button></form><div className="mt-auto hidden rounded-2xl border border-[var(--line)] bg-white/50 p-4 text-xs leading-relaxed text-[var(--muted)] lg:block"><strong className="mb-1 block text-[var(--ink)]">Sustainable rhythm</strong>2 feed posts + 2–3 simple Stories weekly. One 20–30 min recording session every two weeks.</div></aside><section className="min-w-0 py-2 lg:py-8">{tab==="passport"&&<SwissPassport/>}{tab==="calendar"&&<ContentCalendar initialItems={p.content} campaigns={p.campaigns} persistent={p.persistent}/>} {tab==="operations"&&<OperationsInbox data={p.operations}/>} {tab==="instagram"&&<InstagramDashboard data={p.instagram}/>} {tab==="meta"&&<div className="legacy-panel"><Title eyebrow="Performance" title="Meta Ads"/><MetaAdsDashboard data={p.metaData}/></div>}{tab==="email"&&<BrevoDashboard data={p.brevo}/>} {tab==="sync"&&<SyncCenter statuses={p.syncStatuses} persistent={p.persistent}/>}</section></div>}
+function Title({eyebrow,title}:{eyebrow:string;title:string}){return <header className="mb-7"><p className="eyebrow">{eyebrow}</p><h1 className="page-title">{title}</h1></header>}

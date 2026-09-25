@@ -1,26 +1,24 @@
 import { fetchMetaAdsData, fetchEmailCampaignData, fetchEmailSubscriberData } from '@/lib/data';
 import { DashboardTabs } from '@/components/DashboardTabs';
+import { getSyncStatuses, isDatabaseConfigured, listCampaigns, listContent, listOperationsItems, listSnapshots } from '@/lib/db';
+import { buildInstagramAnalytics } from '@/lib/instagram-analytics';
+import { fetchBrevoAnalytics } from '@/lib/brevo';
+import { requireDashboardSession } from '@/lib/require-dashboard-session';
 
 export const dynamic = 'force-dynamic'; // Always fetch the latest data on request
 
 export default async function Home() {
-  const [metaData, emailData, subscriberData] = await Promise.all([
-    fetchMetaAdsData(),
-    fetchEmailCampaignData(),
-    fetchEmailSubscriberData()
+  await requireDashboardSession();
+  const emailDataPromise = fetchEmailCampaignData();
+  const [metaData, emailData, subscriberData, content, campaigns, syncStatuses, instagramSnapshots, brevo, operationsItems] = await Promise.all([
+    fetchMetaAdsData(), emailDataPromise, fetchEmailSubscriberData(), listContent(), listCampaigns(), getSyncStatuses(), listSnapshots('instagram'), emailDataPromise.then(fetchBrevoAnalytics), listOperationsItems()
   ]);
+  const instagramStatus = syncStatuses.find((status) => status.provider === 'instagram');
+  const instagram = buildInstagramAnalytics(instagramSnapshots, instagramStatus?.configured ?? false, instagramStatus?.lastSyncedAt ?? null);
 
   return (
-    <main className="min-h-screen bg-[#020617] text-slate-50 relative selection:bg-indigo-500/30">
-      {/* Background gradients for premium feel */}
-      <div className="fixed top-0 left-0 w-full h-full overflow-hidden -z-10 pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-600/10 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] rounded-full bg-purple-600/10 blur-[150px]" />
-        <div className="absolute top-[40%] right-[10%] w-[30%] h-[30%] rounded-full bg-emerald-600/5 blur-[100px]" />
-      </div>
-
-      <div className="p-4 md:p-8 lg:p-12 relative z-10">
-        <DashboardTabs metaData={metaData} emailData={emailData} subscriberData={subscriberData} />
+    <main className="min-h-screen"><div className="p-3 md:p-6 lg:px-8">
+        <DashboardTabs metaData={metaData} emailData={emailData} subscriberData={subscriberData} content={content} campaigns={campaigns} syncStatuses={syncStatuses} instagram={instagram} brevo={brevo} operations={{ configured: Boolean(process.env.CLOVER_MERCHANT_ID || process.env.N8N_INGEST_SECRET), items: operationsItems, sources: [{ id: 'clover', label: 'Clover online orders', configured: Boolean(process.env.CLOVER_MERCHANT_ID), note: 'Pendiente de revisar el proyecto de preorder, su modelo de pedidos y el método oficial de acceso a Clover.' }, { id: 'website', label: 'Website special requests', configured: Boolean(process.env.N8N_INGEST_SECRET), note: 'Preparado para recibir eventos firmados desde n8n cuando conozcamos el formulario y el payload real.' }] }} persistent={isDatabaseConfigured()} />
       </div>
     </main>
   );
