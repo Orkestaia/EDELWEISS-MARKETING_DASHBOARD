@@ -22,8 +22,16 @@ Commands: `npm run test:passport`, `npm run build`, `npm run test:passport:http`
 ## Open launch checks
 
 1. Actual Android Chrome and iPhone Safari installation, close and reopen from the OS home-screen icon. Emulator checks pass; physical device installation is not claimed.
-2. Configure production/preview environment variables and the PWA domain only when launch is authorized. No live schema mutation or production deployment was performed.
+2. Production deployment authorized and completed on 25 September 2026. Neon Free in Frankfurt is connected to the dashboard production environment; the three Passport tables were migrated without inserting customer/order fixtures. Production secrets are configured in both projects. Preview remains unconfigured.
 3. Remediate the dependency audit. The owner explicitly chose to retain Next.js 16.2.1 and defer the security update; see the documented advisories in `swiss-passport.md`.
 4. Review hosting access-log treatment of bearer URLs before launch. Application code does not log personal tokens; hosting logs are outside these repositories.
 
 The initial brief's rollover/repeated-card tests are intentionally superseded by the user's explicit single-passport decision. All other API names, fields and secrets remain as specified.
+
+## Production smoke checks
+
+- Dashboard: https://edelweiss-marketing-dashboard.vercel.app — deployment `dpl_6qDbP7nwGHoF56g6WBDFumpykmpa`.
+- PWA: https://passport.edelweisspastryshop.ch — deployment `dpl_8aQNLihnDaXQPvTqrzqXGYspRtBH`.
+- Passed: HTTPS landing on custom/default PWA domains, card image, login page, successful authenticated login and admin database read, unauthenticated admin/ingest rejection, authenticated nonexistent-card lookup (404), signed missing-email ingest (skipped, no order written), invalid-passport screen with noindex.
+- The dashboard uses a newly generated password because Vercel does not export the previous sensitive password. Local operator credentials are in ignored `.vercel/passport-secrets.json`; never commit or publish that file.
+- n8n and the separately owned checkout still need their respective integration secrets. These external systems were not modified by this deployment.
