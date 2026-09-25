@@ -1,4 +1,5 @@
 import Papa from 'papaparse';
+import { readFile } from 'node:fs/promises';
 
 const META_ADS_CSV_URL = 'https://docs.google.com/spreadsheets/d/1yV-aTSES68tPit8O17e0-tJAlHssBxJqQerlXbgvhPI/export?format=csv&gid=681302842';
 const EMAIL_CAMPAIGNS_CSV_URL = 'https://docs.google.com/spreadsheets/d/1tThcq-gGpWQ2DKZbMqiRv21YkeDuZAxjZMLnmejsrss/export?format=csv&gid=254736409';
@@ -69,16 +70,26 @@ const parseNumber = (val: string | undefined): number => {
   return isNaN(num) ? 0 : num;
 };
 
+async function fetchCsvWithLocalFallback(url: string, localFile: URL): Promise<string> {
+  try {
+    const response = await fetch(url, { cache: 'no-store', signal: AbortSignal.timeout(12000) });
+    if (!response.ok) throw new Error(`Google Sheets returned ${response.status}`);
+    return await response.text();
+  } catch {
+    try { return await readFile(localFile, 'utf8'); }
+    catch { return ''; }
+  }
+}
+
 export async function fetchMetaAdsData(): Promise<MetaAdData[]> {
-  const res = await fetch(META_ADS_CSV_URL, { cache: 'no-store' });
-  const csvText = await res.text();
+  const csvText = await fetchCsvWithLocalFallback(META_ADS_CSV_URL, new URL('../../meta.csv', import.meta.url));
 
   return new Promise((resolve) => {
     Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const data = results.data.map((row: any) => ({
+        const data = (results.data as Record<string, string>[]).map((row) => ({
           campaignName: row['Campaign Name'] || '',
           status: row['Status'] || '',
           spend: parseNumber(row['Spend ($)']),
@@ -105,8 +116,7 @@ export async function fetchMetaAdsData(): Promise<MetaAdData[]> {
 }
 
 export async function fetchEmailCampaignData(): Promise<EmailCampaignData[]> {
-  const res = await fetch(EMAIL_CAMPAIGNS_CSV_URL, { cache: 'no-store' });
-  let csvText = await res.text();
+  let csvText = await fetchCsvWithLocalFallback(EMAIL_CAMPAIGNS_CSV_URL, new URL('../../email.csv', import.meta.url));
 
   // The email CSV has 6 lines of header/summary before the actual table starts.
   // We need to strip those lines to parse safely with headers.
@@ -122,7 +132,7 @@ export async function fetchEmailCampaignData(): Promise<EmailCampaignData[]> {
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const data = results.data.map((row: any) => ({
+        const data = (results.data as Record<string, string>[]).map((row) => ({
           sendingDate: row['Sending Date'] || '',
           campaignId: row['Campaign ID'] || '',
           campaignName: row['Campaign Name'] || '',
@@ -148,8 +158,7 @@ export async function fetchEmailCampaignData(): Promise<EmailCampaignData[]> {
 }
 
 export async function fetchEmailSubscriberData(): Promise<EmailSubscriberData[]> {
-  const res = await fetch(EMAIL_SUBSCRIBERS_CSV_URL, { cache: 'no-store' });
-  let csvText = await res.text();
+  let csvText = await fetchCsvWithLocalFallback(EMAIL_SUBSCRIBERS_CSV_URL, new URL('../../email.csv', import.meta.url));
   
   // The subscriber CSV has 6 lines of header before the actual data starts.
   // We need to strip those lines.
@@ -165,7 +174,7 @@ export async function fetchEmailSubscriberData(): Promise<EmailSubscriberData[]>
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
-        const data = results.data.map((row: any) => ({
+        const data = (results.data as Record<string, string>[]).map((row) => ({
           snapshotDate: row['Snapshot Date'] || '',
           emailsSent: parseNumber(row['Emails Sent']),
           deliveredRate: parseNumber(row['Delivered %']),
