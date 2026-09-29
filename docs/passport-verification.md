@@ -31,8 +31,12 @@ Recurring passports and carryover are restored as requested on 29 September. Exi
 
 ## Production smoke checks
 
-- Dashboard: https://edelweiss-marketing-dashboard.vercel.app — deployment `dpl_6qDbP7nwGHoF56g6WBDFumpykmpa`.
-- PWA: https://passport.edelweisspastryshop.ch — deployment `dpl_8aQNLihnDaXQPvTqrzqXGYspRtBH`.
+- Dashboard: https://edelweiss-marketing-dashboard.vercel.app — deployment `dpl_CuUSCMiq4bf9yk1tyAj1MXdY7BYU`.
+- PWA: https://passport.edelweisspastryshop.ch — deployment `dpl_7QVjTH7juPcHfCrLQJGNGVd7dDH4`.
 - Passed: HTTPS landing on custom/default PWA domains, card image, login page, successful authenticated login and admin database read, unauthenticated admin/ingest rejection, authenticated nonexistent-card lookup (404), signed missing-email ingest (skipped, no order written), invalid-passport screen with noindex.
 - The dashboard uses a newly generated password because Vercel does not export the previous sensitive password. Local operator credentials are in ignored `.vercel/passport-secrets.json`; never commit or publish that file.
 - n8n and the separately owned checkout still need their respective integration secrets. These external systems were not modified by this deployment.
+
+## Recurring passports deployment — 29 September 2026
+
+Production READY: dashboard code commit 0417f1e (remote build 14 s), PWA code commit 106a7d7 (remote build 20 s). All 10 backend groups, real HTTP auth checks, targeted backend lint, PWA lint, both production builds and 20 browser tests passed (2 existing engine-specific skips). Migrated the card-number constraint in place. Post-deployment checks passed for HTTPS domains, image assets, signed ingest without email, authenticated reads, login and new onboarding. The original test order and customer token have the same before/after fingerprint and retain 2 stamps. No customer/order test fixtures were added in production. No n8n or main website changes. Runtime log/drain audit was not repeated in this change.
