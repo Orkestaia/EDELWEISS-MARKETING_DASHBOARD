@@ -26,10 +26,14 @@ export class PassportService {
   private async snapshot(tx: Connection, customer: Customer) {
     await tx.query("update passport_rewards set status='expired' where customer_id=$1 and status='active' and expires_at <= now()", [customer.id]);
     const orders = await tx.query<Order>("select * from passport_orders where customer_id=$1 and status='valid' order by ordered_at, created_at, id", [customer.id]);
-    const [reward] = await tx.query<Reward>("select * from passport_rewards where customer_id=$1 and status='active'", [customer.id]);
-    const total = Math.min(10, orders.reduce((sum, o) => sum + o.stamps_awarded, 0));
-    const stamps = orders.flatMap(o => Array.from({ length: o.stamps_awarded }, () => ({ stampedAt: iso(o.ordered_at) }))).slice(0, 10).map((s, i) => ({ n: i + 1, ...s }));
-    return { firstName: customer.first_name, stampsOnCard: total, totalStamps: total, cardsCompleted: total === 10 ? 1 : 0, stamps, reward: publicReward(reward), history: orders.slice(-20).reverse().map(o => ({ date: iso(o.ordered_at), stamps: o.stamps_awarded })) };
+    // The public contract has one reward slot. Show the one expiring first;
+    // ingest overrides it with the newly issued reward on a completion.
+    const [reward] = await tx.query<Reward>("select * from passport_rewards where customer_id=$1 and status='active' order by expires_at, card_number limit 1", [customer.id]);
+    const total = orders.reduce((sum, o) => sum + o.stamps_awarded, 0);
+    const onCard = total % 10;
+    const displayed = reward && total > 0 && onCard === 0 ? 10 : onCard;
+    const stamps = orders.flatMap(o => Array.from({ length: o.stamps_awarded }, () => ({ stampedAt: iso(o.ordered_at) }))).slice(total - displayed, total).map((s, i) => ({ n: i + 1, ...s }));
+    return { firstName: customer.first_name, stampsOnCard: displayed, totalStamps: total, cardsCompleted: Math.floor(total / 10), stamps, reward: publicReward(reward), history: orders.slice(-20).reverse().map(o => ({ date: iso(o.ordered_at), stamps: o.stamps_awarded })) };
   }
   async ingest(body: Record<string, unknown>) {
     if (body.customerEmail == null || body.customerEmail === "" || (typeof body.customerEmail === "string" && !normalizeEmail(body.customerEmail))) return { skipped: true, reason: "no_email" };
@@ -53,26 +57,29 @@ export class PassportService {
       const orderId = randomUUID();
       await tx.query("insert into passport_orders(id,customer_id,external_order_id,subtotal_cents,total_cents,stamps_awarded) values($1,$2,$3,$4,$5,$6)", [orderId, customer.id, body.orderId, subtotal, total, award]);
       let completed = false;
-      if (before.totalStamps < 10 && before.totalStamps + award >= 10) {
-        // Lifetime uniqueness is intentional: the owner confirmed one passport, no rollover or reissue.
+      let issuedReward: Reward | undefined;
+      for (let cardNumber = before.cardsCompleted + 1; cardNumber <= Math.floor((before.totalStamps + award) / 10); cardNumber++) {
+        // One reward per completed card, including after void/re-completion.
         const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
         for (let attempt = 0; attempt < 10; attempt++) {
           const code = `SWISS-${Array.from({ length: 6 }, () => alphabet[randomInt(alphabet.length)]).join("")}`;
-          const inserted = await tx.query("insert into passport_rewards(id,customer_id,code,triggered_by_order_id) values($1,$2,$3,$4) on conflict do nothing returning id", [randomUUID(), customer.id, code, orderId]);
-          if (inserted.length) { completed = true; break; }
-          const issued = await tx.query("select id from passport_rewards where customer_id=$1", [customer.id]);
+          const inserted = await tx.query<Reward>("insert into passport_rewards(id,customer_id,card_number,code,triggered_by_order_id) values($1,$2,$3,$4,$5) on conflict do nothing returning *", [randomUUID(), customer.id, cardNumber, code, orderId]);
+          if (inserted.length) { completed = true; issuedReward = inserted[0]; break; }
+          const issued = await tx.query("select id from passport_rewards where customer_id=$1 and card_number=$2", [customer.id, cardNumber]);
           if (issued.length) break;
           if (attempt === 9) throw new Error("reward_code_exhausted");
         }
       }
       const state = await this.snapshot(tx, customer);
+      if (issuedReward) state.reward = publicReward(issuedReward);
       const added = state.totalStamps - before.totalStamps;
-      return this.ingestResponse(customer, state, added, award === 2, completed, stops.slice(before.totalStamps, state.totalStamps), false);
+      const latest = Array.from({ length: added }, (_, i) => stops[(before.totalStamps + i) % 10]);
+      return this.ingestResponse(customer, state, added, award === 2, completed, latest, false);
     });
   }
   private ingestResponse(customer: Customer, state: Awaited<ReturnType<PassportService["snapshot"]>>, added: number, double: boolean, completed: boolean, latest: typeof stops, duplicate: boolean) {
     const next = stops[state.stampsOnCard];
-    return { duplicate, firstName: state.firstName, passportUrl: `${this.baseUrl}/p/${customer.token}`, stampsAdded: added, doubleStamp: double, totalStamps: state.totalStamps, stampsOnCard: state.stampsOnCard, stampsToReward: 10 - state.stampsOnCard, cardCompleted: completed, carryOver: 0, latestStops: latest, nextStop: next ? { n: next.n, name: next.name } : null, cardImageUrl: `${this.baseUrl}/cards/card-${String(state.stampsOnCard).padStart(2, "0")}.jpg`, reward: state.reward };
+    return { duplicate, firstName: state.firstName, passportUrl: `${this.baseUrl}/p/${customer.token}`, stampsAdded: added, doubleStamp: double, totalStamps: state.totalStamps, stampsOnCard: state.stampsOnCard, stampsToReward: 10 - state.stampsOnCard, cardCompleted: completed, carryOver: completed ? state.totalStamps % 10 : 0, latestStops: latest, nextStop: next ? { n: next.n, name: next.name } : null, cardImageUrl: `${this.baseUrl}/cards/card-${String(completed ? 10 : state.stampsOnCard).padStart(2, "0")}.jpg`, reward: state.reward };
   }
   async card(token: string) {
     if (!/^[\w-]{43}$/.test(token)) return null;
@@ -103,18 +110,19 @@ export class PassportService {
       const [customer] = await tx.query<Customer>("select * from passport_customers where id=$1 for update", [order.customer_id]);
       await tx.query("update passport_orders set status='voided',void_reason=$2 where id=$1 and status='valid'", [id, reason]);
       const state = await this.snapshot(tx, customer);
-      if (state.totalStamps < 10) await tx.query("update passport_rewards set status='revoked' where customer_id=$1 and status in ('active','expired')", [customer.id]);
+      await tx.query("update passport_rewards set status='revoked' where customer_id=$1 and card_number>$2 and status in ('active','expired')", [customer.id, state.cardsCompleted]);
       return true;
     });
   }
   async admin() {
     await this.expire();
     const customers = await this.db.query(`select c.id,c.email,c.first_name,c.token,
-      count(o.id)::int as orders, least(10,coalesce(sum(o.stamps_awarded),0))::int as stamps,
+      count(o.id)::int as orders,
+      (case when r.code is not null and coalesce(sum(o.stamps_awarded),0)>0 and coalesce(sum(o.stamps_awarded),0)%10=0 then 10 else coalesce(sum(o.stamps_awarded),0)%10 end)::int as stamps,
       max(o.ordered_at) as last_order, r.code, r.expires_at
       from passport_customers c left join passport_orders o on o.customer_id=c.id and o.status='valid'
-      left join passport_rewards r on r.customer_id=c.id and r.status='active'
-      group by c.id,r.code,r.expires_at order by (least(10,coalesce(sum(o.stamps_awarded),0))<10) desc, stamps desc`);
+      left join lateral (select code,expires_at from passport_rewards where customer_id=c.id and status='active' order by expires_at,card_number limit 1) r on true
+      group by c.id,r.code,r.expires_at order by (coalesce(sum(o.stamps_awarded),0)%10) desc, stamps desc`);
     const rewards = await this.db.query("select status,count(*)::int as count from passport_rewards group by status");
     const [days] = await this.db.query("select avg(extract(epoch from (ordered_at-previous))/86400) as days from (select ordered_at,lag(ordered_at) over(partition by customer_id order by ordered_at) as previous from passport_orders where status='valid') t");
     return { customers, rewards, averageDays: days?.days == null ? null : Number(days.days), publicBaseUrl: this.baseUrl };

@@ -57,7 +57,7 @@ test("threshold boundaries, normalized identity, missing email and retry never i
     assert.equal(await service.card("invalid"), null);
   } finally { await pg.close(); }
 });
-test("ten orders issue exactly one 30-day reward; finished passport stays 10/10", async () => {
+test("ten orders issue a 30-day reward; next orders start a new passport", async () => {
   const { pg, service } = await fixture();
   try {
     let result;
@@ -68,17 +68,28 @@ test("ten orders issue exactly one 30-day reward; finished passport stays 10/10"
     const reward = (await pg.query<{ issued_at: Date; expires_at: Date }>("select * from passport_rewards")).rows[0];
     assert.equal(new Date(reward.expires_at).getTime() - new Date(reward.issued_at).getTime(), 30 * 86400000);
     const extra = await ingest(service, order("after-completion", "$50.00"));
-    assert.equal(extra.stampsAdded, 0); assert.equal(extra.totalStamps, 10); assert.equal(extra.cardCompleted, false);
+    assert.equal(extra.stampsAdded, 2); assert.equal(extra.totalStamps, 12); assert.equal(extra.cardCompleted, false);
+    assert.equal(extra.stampsOnCard, 2); assert.deepEqual(extra.latestStops.map(s => s.n), [1, 2]);
+    assert.equal(extra.cardImageUrl, `${base}/cards/card-02.jpg`);
     assert.equal((await pg.query("select * from passport_rewards")).rows.length, 1);
   } finally { await pg.close(); }
 });
-test("9 + double completes at 10 without carryover (owner-approved amendment)", async () => {
+test("9 + double issues a reward, carries one stamp and restarts at Zurich", async () => {
   const { pg, service } = await fixture();
   try {
     for (let i = 0; i < 9; i++) await ingest(service, order(`single-${i}`));
     const result = await ingest(service, order("double", "$40.01"));
-    assert.equal(result.stampsOnCard, 10); assert.equal(result.totalStamps, 10); assert.equal(result.stampsAdded, 1); assert.equal(result.carryOver, 0); assert.equal(result.cardCompleted, true);
-    assert.deepEqual(result.latestStops?.map(s => s.n), [10]); assert.equal(result.nextStop, null);
+    assert.equal(result.stampsOnCard, 1); assert.equal(result.totalStamps, 11); assert.equal(result.stampsAdded, 2); assert.equal(result.carryOver, 1); assert.equal(result.cardCompleted, true);
+    assert.ok(result.reward); assert.equal(result.doubleStamp, true);
+    assert.equal(result.cardImageUrl, `${base}/cards/card-10.jpg`);
+    assert.deepEqual(result.latestStops?.map(s => s.n), [10, 1]); assert.equal(result.latestStops[1].name, "Zürich");
+    assert.equal(result.nextStop?.n, 2); assert.equal(result.stampsToReward, 9);
+    const card = await service.card(result.passportUrl.split('/').pop()!);
+    assert.equal(card!.cardsCompleted, 1); assert.equal(card!.stampsOnCard, 1);
+    assert.deepEqual(card!.stamps.map(s => s.n), [1]); assert.ok(card!.reward);
+    const retry = await ingest(service, order("double", "$40.01"));
+    assert.equal(retry.duplicate, true); assert.equal(retry.cardCompleted, false); assert.equal(retry.stampsAdded, 0);
+    assert.equal(retry.totalStamps, 11); assert.equal(retry.carryOver, 0); assert.deepEqual(retry.latestStops, []);
   } finally { await pg.close(); }
 });
 test("void revokes an unredeemed reward; returning to 10 never reissues", async () => {
@@ -92,7 +103,7 @@ test("void revokes an unredeemed reward; returning to 10 never reissues", async 
     const r = (await pg.query<{ code: string; status: string }>("select code,status from passport_rewards")).rows[0];
     assert.equal(r.status, "revoked"); assert.deepEqual(await service.reward(r.code, "daniel@example.com"), { valid: false, reason: "revoked" });
     const again = await ingest(service, order("replacement"));
-    assert.equal(again.cardCompleted, false); assert.equal(again.reward, null); assert.equal(again.stampsOnCard, 10);
+    assert.equal(again.cardCompleted, false); assert.equal(again.reward, null); assert.equal(again.stampsOnCard, 0);
     assert.equal((await pg.query("select * from passport_rewards")).rows.length, 1);
   } finally { await pg.close(); }
 });
@@ -118,7 +129,7 @@ test("validate/redeem, mismatched email, atomic second redemption, same-order re
     await pg.query("update passport_rewards set expires_at=now()-interval '1 second' where code=$1", [expiredCode]);
     assert.deepEqual(await service.reward(expiredCode, "other@example.com"), { valid: false, reason: "expired" });
     const card = await service.card(completed!.passportUrl!.split("/").pop()!);
-    assert.equal(card!.reward, null); assert.equal(card!.stampsOnCard, 10);
+    assert.equal(card!.reward, null); assert.equal(card!.stampsOnCard, 0);
   } finally { await pg.close(); }
 });
 test("concurrent duplicate deliveries create one order and completion creates one reward", async () => {
@@ -134,3 +145,54 @@ test("concurrent duplicate deliveries create one order and completion creates on
 });
 
 async function ingest(service: PassportService, body: ReturnType<typeof order>) { const result = await service.ingest(body); assert.ok('stampsAdded' in result); return result; }
+
+
+test("20 stamps issue distinct rewards by card; admin does not multiply orders", async () => {
+  const {pg,service}=await fixture();
+  try {
+    let first, second;
+    for(let i=1;i<=20;i++) {
+      const result=await ingest(service,order('twenty-'+i));
+      if(i===10) first=result;
+      if(i===20) second=result;
+    }
+    assert.equal(second!.totalStamps,20); assert.equal(second!.stampsOnCard,10);
+    assert.equal(second!.cardCompleted,true); assert.equal(second!.carryOver,0);
+    assert.equal(second!.cardImageUrl,base+'/cards/card-10.jpg');
+    assert.notEqual(first!.reward!.code,second!.reward!.code);
+    const rewards=(await pg.query<{card_number:number;code:string;status:string}>('select card_number,code,status from passport_rewards order by card_number')).rows;
+    assert.deepEqual(rewards.map(r=>r.card_number),[1,2]);
+    const overview=await service.admin();
+    assert.equal(overview.customers.length,1); assert.equal(overview.customers[0].orders,20);
+    const token=second!.passportUrl.split('/').pop()!;
+    assert.equal((await service.card(token))!.cardsCompleted,2);
+    assert.equal((await service.card(token))!.reward!.code,first!.reward!.code);
+    await service.reward(first!.reward!.code,'daniel@example.com','redeem-first');
+    assert.equal((await service.card(token))!.reward!.code,second!.reward!.code);
+    const last=(await pg.query<{id:string}>("select id from passport_orders where external_order_id='twenty-20'")).rows[0];
+    await service.voidOrder(last.id,'Refund completion');
+    const after=(await pg.query<{card_number:number;status:string}>('select card_number,status from passport_rewards order by card_number')).rows;
+    assert.deepEqual(after.map(r=>r.status),['redeemed','revoked']);
+    const card=await service.card(token);
+    assert.equal(card!.totalStamps,19); assert.equal(card!.cardsCompleted,1); assert.equal(card!.stampsOnCard,9);
+    assert.equal(card!.reward,null);
+  } finally {await pg.close();}
+});
+
+test("legacy card constraint migration preserves orders, tokens and rewards", async () => {
+  const {pg,service}=await fixture();
+  try {
+    let result;
+    for(let i=0;i<10;i++) result=await ingest(service,order('legacy-'+i));
+    const token=result!.passportUrl.split('/').pop()!;
+    const code=result!.reward!.code;
+    await pg.query('alter table passport_rewards drop constraint passport_rewards_card_number_positive');
+    await pg.query('alter table passport_rewards add constraint passport_rewards_card_number_check check(card_number=1)');
+    await service.migrate(); await service.migrate();
+    assert.equal((await service.card(token))!.reward!.code,code);
+    for(let i=10;i<20;i++) result=await ingest(service,order('legacy-'+i));
+    assert.equal(result!.totalStamps,20);
+    assert.equal((await pg.query('select * from passport_orders')).rows.length,20);
+    assert.equal((await pg.query('select * from passport_rewards')).rows.length,2);
+  } finally {await pg.close();}
+});

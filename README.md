@@ -125,4 +125,4 @@ El estado exacto, los activos identificados y el procedimiento seguro para conti
 
 ## Swiss Passport
 
-The dashboard now includes protected administration, signed order ingestion, personal card reads and atomic reward redemption. Setup, API contracts, the owner-approved single-passport rule, tests and a signed curl example are documented in [docs/swiss-passport.md](docs/swiss-passport.md). Configure the new server-only variables in .env.example before use. No production deployment is included.
+The dashboard now includes protected administration, signed order ingestion, personal card reads and atomic reward redemption. Setup, API contracts, recurring passports and stamp carryover, tests and a signed curl example are documented in [docs/swiss-passport.md](docs/swiss-passport.md). Configure the new server-only variables in .env.example before use. Production deployment details are recorded in docs/passport-verification.md.

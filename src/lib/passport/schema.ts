@@ -14,11 +14,17 @@ export const schema = [
   )`,
   `create index if not exists passport_orders_customer_idx on passport_orders(customer_id, ordered_at)`,
   `create table if not exists passport_rewards (
-    id uuid primary key, customer_id uuid not null references passport_customers(id), card_number int not null default 1 check(card_number=1),
+    id uuid primary key, customer_id uuid not null references passport_customers(id), card_number int not null default 1 constraint passport_rewards_card_number_positive check(card_number>0),
     code text unique not null, percent int not null default 15 check(percent=15),
     issued_at timestamptz not null default now(), expires_at timestamptz not null default (now() + interval '30 days'),
     status text not null default 'active' check(status in ('active','redeemed','expired','revoked')),
     redeemed_at timestamptz, redeemed_order_id text, triggered_by_order_id uuid references passport_orders(id),
     unique(customer_id, card_number)
-  )`
+  )`,
+  `alter table passport_rewards drop constraint if exists passport_rewards_card_number_check`,
+  `do $$ begin
+    if not exists (select 1 from pg_constraint where conrelid='passport_rewards'::regclass and conname='passport_rewards_card_number_positive') then
+      alter table passport_rewards add constraint passport_rewards_card_number_positive check(card_number>0);
+    end if;
+  end $$`
 ];

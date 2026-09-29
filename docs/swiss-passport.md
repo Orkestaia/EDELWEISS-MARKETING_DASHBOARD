@@ -1,18 +1,14 @@
 # Edelweiss Swiss Passport
 
-## Owner-approved amendment, 25 September 2026
+## Recurring passports — confirmed 29 September 2026
 
-The initial brief's recurring cards and carryover are superseded by the owner's explicit confirmation:
-
-- One passport per customer, capped at 10 displayed/usable stamps.
-- One reward may be issued in its lifetime. Voiding an order and reaching 10 again never issues a replacement, including when the first reward was redeemed.
-- No next card, no carryover. A different passport may be designed later.
-- 9 + a double-stamp order finishes at 10; `stampsAdded: 1`, `doubleStamp: true`, `carryOver: 0`.
-- Later orders remain in the order ledger for idempotency and administration, but `stampsAdded: 0`, `totalStamps: 10`, `stampsOnCard: 10`, `cardsCompleted: 1`; no additional reward.
-- The ledger records the original 1/2 award for each valid order; progress is `min(10, sum(valid awards))`. History shows those original awards. No hidden balance is banked for a future passport.
-- Completed maps stay at 10/10 when the reward is redeemed, expired or revoked (unless a void actually reduces the valid ledger below 10).
-
-These are the only intentional changes to the original business rules. The route paths, authentication headers and JSON field names remain unchanged. The administrative void operation is retained as requested by the original brief, although the owner says it will not normally be used.
+- Lifetime total is the sum of valid order stamps; completed cards = floor(total / 10), current progress = total % 10.
+- Every newly completed card earns its own 15% reward, valid for 30 days. Extra stamps carry forward: 9 + double = 11 lifetime stamps, reward for card 1 and one stamp on card 2.
+- Ingest on completion returns cardCompleted:true, the newly issued reward, card-10.jpg and carryOver. latestStops follows order of earning, e.g. [10, 1], then restarts at Zürich for the new card. Other response names and authentication are unchanged.
+- With an active reward and no remainder the PWA displays 10/10; with a remainder it displays the new card. Without an active reward it displays the remainder, including 0/10.
+- The existing singular reward field shows the active reward expiring first; once used/expired, the next active reward appears. Completion ingest always returns the newly issued code so n8n can announce it.
+- One reward per customer/card_number remains enforced: voiding revokes unredeemed rewards above floor(valid stamps / 10). Redeemed rewards survive, and re-completing the same card does not issue another code for that card.
+- The idempotent migration removes only the old card_number=1 restriction and enforces positive card numbers. Existing tokens, orders and rewards are retained.
 
 ## Configuration and operation
 
@@ -22,7 +18,7 @@ See `.env.example`. All secrets are server-only. Generate independent random sec
 
 Tables are created idempotently on the first authorized Passport request. No Passport schema or historical orders are seeded during build. The live `DATABASE_URL` is never used by tests. Do not call ingest on production until launch: the ingestion time is `ordered_at`, since the payload has no actual order timestamp (`pickupDate` is not a payment timestamp).
 
-Orders have unique `(source, external_order_id)` and customer/reward changes occur in the same transaction. An advisory lock serializes a given external order even if a retry changes the email; upsert locks serialize orders for one customer. A unique `(customer_id, card_number)` constraint enforces one lifetime reward. Code collisions retry without aborting the transaction. Tokens are random 32-byte base64url values.
+Orders have unique `(source, external_order_id)` and customer/reward changes occur in the same transaction. An advisory lock serializes a given external order even if a retry changes the email; upsert locks serialize orders for one customer. A unique `(customer_id, card_number)` constraint enforces one reward per numbered card. Code collisions retry without aborting the transaction. Tokens are random 32-byte base64url values.
 
 Reward validation/redeeming requires the customer's normalized email. A successful redeem returns `{valid:true,percent:15,duplicate:false}`; retrying it with the same order returns `{valid:true,percent:15,duplicate:true}`. Another order returns `{valid:false,reason:"redeemed"}`. The update checks active status and expiry atomically. Expiry is applied on reads, validation and the existing daily cron.
 
@@ -57,11 +53,11 @@ npx tsc --noEmit
 npm run build
 ```
 
-The automated suite uses PGlite's PostgreSQL engine in memory: thresholds, HMAC freshness/body integrity, sessions, normalized identity, duplicates, no email, lifecycle, cap/no carryover, void/revocation/no reissue, expiry and atomic redemption. PGlite serializes transactions; production PostgreSQL multi-connection locking should additionally be exercised in a staging database before launch.
+The automated suite uses PGlite's PostgreSQL engine in memory: thresholds, HMAC freshness/body integrity, sessions, normalized identity, duplicates, no email, lifecycle, rollover, repeated rewards, void/revocation/no reissue for the same card, expiry and atomic redemption. PGlite serializes transactions; production PostgreSQL multi-connection locking should additionally be exercised in a staging database before launch.
 
 The PWA PR contains browser tests, image generation and installation checks. A browser emulator cannot certify real OS home-screen installation; the native Android and iPhone acceptance check must be recorded on actual devices before launch.
 
-No production deployment or production database mutation is part of this implementation.
+Production deployment was authorized. See passport-verification.md for deployment checks.
 
 ## Known security dependency issue — owner deferred update
 
