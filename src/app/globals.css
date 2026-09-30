@@ -67,3 +67,7 @@ button, input, textarea, select { font: inherit; } button { cursor:pointer; }
     transform: translateY(0);
   }
 }
+
+/* The restored Operations layout retains its own calendar and navigation styles. */
+:root { --ink:#1e2925; --muted:#68716c; --forest-2:#245548; --cocoa:#654538; }
+.mobile-nav { grid-template-columns:repeat(4,1fr); }

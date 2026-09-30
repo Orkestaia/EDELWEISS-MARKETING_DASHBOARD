@@ -88,7 +88,7 @@ La app consulta Insights por campaña y prepara gasto, alcance, impresiones, fre
 
 - `POST /api/sync`: botón `Sync now`; hace hasta 3 intentos y devuelve fuente, hora, intentos y error legible por integración.
 - `GET /api/sync?history=1`: últimas 30 sincronizaciones cuando Redis está conectado.
-- `GET /api/cron/sync`: ejecución diaria a las 10:15 UTC definida en `vercel.json`.
+- `GET /api/cron/daily-sync`: ejecución diaria a las 10:15 UTC; `/api/cron/sync` conserva compatibilidad y ejecuta el mismo trabajo directamente.
 - `CRON_SECRET`: Vercel lo envía como `Authorization: Bearer ...` al cron.
 - Mientras falten credenciales, Brevo y Meta muestran configuración pendiente y Sheets continúa como fallback. No se generan métricas ficticias.
 
@@ -117,3 +117,13 @@ C:\STUDIOS-MEDIA\social\clientes\edelweiss\deliverables\2026-08-28-giveaway-5000
 ```
 
 La ficha del calendario conserva la referencia. No se copian archivos pesados al repositorio.
+
+## Login and Swiss Passport
+
+All pages and internal APIs require the signed dashboard session (DASHBOARD_PASSWORD and DASHBOARD_SESSION_SECRET). Orders are fetched server-side from the definitive Sheet; no customer data is returned before authentication. Passport endpoints retain their original HMAC/Bearer contracts and unchanged secrets. See docs/swiss-passport.md.
+
+## Production branch policy
+
+Production must come from main, after merging and checking all relevant branches. Use npm run deploy:production, which rejects feature branches, dirty checkouts and HEAD different from origin/main. Do not deploy individual feature branches. This restoration is awaiting owner review before any production deployment.
+
+See docs/merge-operations-passport.md for the conflict resolutions, verification evidence and production environment inventory.

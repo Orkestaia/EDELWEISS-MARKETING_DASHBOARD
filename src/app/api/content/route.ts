@@ -1,14 +1,19 @@
+import { hasDashboardSession } from '@/lib/require-dashboard-session';
+import { sameOrigin } from '@/lib/dashboard-session';
 import { readContentStore, writeContentItems } from '@/lib/content-store';
 import type { ContentItem } from '@/lib/content-types';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
+  if (!await hasDashboardSession()) return Response.json({error:"Unauthorized"},{status:401});
   try { return Response.json(await readContentStore()); }
   catch (error) { return Response.json({ error: error instanceof Error ? error.message : 'READ_FAILED' }, { status: 500 }); }
 }
 
 export async function POST(request: Request) {
+  if (!await hasDashboardSession()) return Response.json({error:"Unauthorized"},{status:401});
+  if (!sameOrigin(request)) return Response.json({error:"Forbidden"},{status:403});
   try {
     const item = await request.json() as ContentItem;
     if (!item.title || !item.scheduledAt || !item.format) return Response.json({ error: 'Campos obligatorios incompletos.' }, { status: 400 });
@@ -20,6 +25,8 @@ export async function POST(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  if (!await hasDashboardSession()) return Response.json({error:"Unauthorized"},{status:401});
+  if (!sameOrigin(request)) return Response.json({error:"Forbidden"},{status:403});
   try {
     const item = await request.json() as ContentItem;
     const store = await readContentStore();
@@ -30,6 +37,8 @@ export async function PUT(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  if (!await hasDashboardSession()) return Response.json({error:"Unauthorized"},{status:401});
+  if (!sameOrigin(request)) return Response.json({error:"Forbidden"},{status:403});
   try {
     const id = new URL(request.url).searchParams.get('id');
     if (!id) return Response.json({ error: 'Falta id.' }, { status: 400 });

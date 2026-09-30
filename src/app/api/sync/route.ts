@@ -1,27 +1,22 @@
-import { fetchBrevoCampaigns, fetchMetaInsights } from '@/lib/marketing-adapters';
-import { fetchEmailCampaignData, fetchMetaAdsData } from '@/lib/data';
-import { appendSyncHistory, readSyncHistory } from '@/lib/content-store';
-
+import { hasDashboardSession } from '@/lib/require-dashboard-session';
+import { sameOrigin } from '@/lib/dashboard-session';
+import { syncMarketing } from '@/lib/marketing-sync';
+import { readSyncHistory } from '@/lib/content-store';
+import { syncBrevo, syncMeta, syncInstagram, syncAll } from '@/lib/sync';
 export const runtime = 'nodejs';
-
-async function sync() {
-  const startedAt = new Date().toISOString();
-  async function retry<T>(operation: () => Promise<T>) {
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try { return { data: await operation(), attempts: attempt }; }
-      catch (error) { lastError = error; if (attempt < 3) await new Promise(resolve => setTimeout(resolve, attempt * 250)); }
-    }
-    throw lastError;
-  }
-  const [brevo, meta] = await Promise.all([
-    retry(fetchBrevoCampaigns).then(result => ({ source: 'api', ...result })).catch(async (error) => ({ source: process.env.BREVO_API_KEY ? 'error' : 'sheets', data: await fetchEmailCampaignData().catch(() => []), attempts: 3, error: error.message })),
-    retry(fetchMetaInsights).then(result => ({ source: 'api', ...result })).catch(async (error) => ({ source: process.env.META_ACCESS_TOKEN ? 'error' : 'sheets', data: await fetchMetaAdsData().catch(() => []), attempts: 3, error: error.message })),
-  ]);
-  const result = { startedAt, completedAt: new Date().toISOString(), brevo, meta };
-  await appendSyncHistory(result).catch(() => undefined);
-  return result;
+export async function GET(request: Request) {
+ if (!await hasDashboardSession()) return Response.json({error:'Unauthorized'},{status:401});
+ if(new URL(request.url).searchParams.get('history')==='1') return Response.json({history:await readSyncHistory()});
+ return Response.json({error:'Use POST to synchronize'},{status:405});
 }
-
-export async function GET(request: Request) { return new URL(request.url).searchParams.get('history') === '1' ? Response.json({ history: await readSyncHistory() }) : Response.json(await sync()); }
-export async function POST() { return Response.json(await sync()); }
+export async function POST(request: Request) {
+ if (!await hasDashboardSession()) return Response.json({error:'Unauthorized'},{status:401});
+ if (!sameOrigin(request)) return Response.json({error:'Forbidden'},{status:403});
+ try {
+ const p=new URL(request.url).searchParams.get('provider');
+ if(!p) return Response.json(await syncMarketing());
+ if(!['brevo','meta','instagram','all'].includes(p)) return Response.json({error:'Unknown provider'},{status:400});
+ const result=await (p==='brevo'?syncBrevo():p==='meta'?syncMeta():p==='instagram'?syncInstagram():syncAll());
+ return Response.json({ok:true,result});
+ }catch {return Response.json({error:'Synchronization failed'},{status:503});}
+}
