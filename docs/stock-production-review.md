@@ -25,3 +25,16 @@ La configuración de producción se ha comprobado por nombre y presencia, sin im
 - El acceso sigue usando contraseña compartida; los nombres del personal son autodeclarados. No hay funcionamiento offline completo.
 
 Después de publicar se comprueba la URL canónica, redirección de páginas privadas, rechazo de APIs sin sesión, sesión real con cookie segura, vistas autenticadas sin filtrar datos privados a stdout y estado del despliegue. No se crean planes ni cierres ficticios en producción para verificarlo.
+
+## Publicación realizada — 2026-11-06
+
+- Código de aplicación: main `29f0c3b5d517241491dbb1b586350075cfc9ece7`, con feature `c118146` integrada. Las ramas de marketing y Passport ya estaban incluidas.
+- Se repitieron sobre main integrado `npm test` (82 + 10 tests), `npm run build`, `npm run lint` y ambas suites HTTP: correctos.
+- Se publicó exclusivamente con `npm run deploy:production`, desde main limpio y coincidente con origin/main.
+- Vercel: `dpl_GreFgSp71YxLUgbyBvzmDCG4xr1Z`, estado READY, target production, rama main y commit coincidentes.
+- URL: https://edelweiss-marketing-dashboard.vercel.app/stock. La página redirige al login y las siete APIs privadas comprobadas rechazan acceso sin sesión con 401. Las tres definiciones de cron están presentes.
+- Inventario remoto: 252 entradas examinadas, cero archivos privados inesperados. Consulta de logs del despliegue: cero entradas de error en el momento de la comprobación.
+
+La contraseña de producción es de tipo sensitive: Vercel no devuelve su valor y no está en los archivos locales. La comprobación autenticada dentro de producción está pendiente del inicio de sesión del propietario en la pestaña abierta; no se ha desactivado autenticación ni cambiado la contraseña. La verificación de cuatro paneles con BD real y las pruebas de guardado/conflictos se realizaron previamente en el servidor local de producción descrito en stock-operations.md. No confundir esa evidencia con una prueba autenticada completada en Vercel.
+
+Este registro posterior a la publicación solo modifica documentación; el commit de aplicación desplegado sigue siendo 29f0c3b.

@@ -127,6 +127,6 @@ All pages and internal APIs require the signed dashboard session (DASHBOARD_PASS
 
 ## Production branch policy
 
-Production must come from main, after merging and checking all relevant branches. Use npm run deploy:production, which rejects feature branches, dirty checkouts and HEAD different from origin/main. Do not deploy individual feature branches. This restoration is awaiting owner review before any production deployment.
+Production must come from main, after merging and checking all relevant branches. Use npm run deploy:production, which rejects feature branches, dirty checkouts and HEAD different from origin/main. Do not deploy individual feature branches. The owner-authorized stock release was deployed on 2026-11-06 from integrated main; see [docs/stock-production-review.md](docs/stock-production-review.md) for evidence and verification limits.
 
 See docs/merge-operations-passport.md for the conflict resolutions, verification evidence and production environment inventory.
