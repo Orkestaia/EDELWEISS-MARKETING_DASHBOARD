@@ -6,7 +6,7 @@ Centro operativo de marketing de Edelweiss Pastry Shop (Biddeford, Maine), const
 
 - `Stock & Production` en `/stock`: recuentos y cierre móvil, plan semanal, sugerencias explicadas de producción, encargos agregados, eventos, comparaciones y registro privado de facturas alimentarias. Uso y límites actuales en [docs/stock-operations.md](docs/stock-operations.md); contrato con la web en [docs/STOCK-PLANNING-SPEC.md](docs/STOCK-PLANNING-SPEC.md).
 
-  La visita guiada inicial y **Help & guides** explican el módulo en inglés/español y ofrecen dos guías PDF privadas. `npm run test:stock:help` comprueba el recorrido y las descargas tras el build. Los PDF se regeneran con `scripts/generate-stock-guides.py` y el runtime Python documentado en ese script.
+  La práctica guiada inicial de **Plain Croissant** permite aprender pulsando controles y usando cantidades ficticias, sin escrituras ni cambios en los registros reales. **Help & guides** permite repetirla en inglés/español y descargar dos guías PDF privadas. `npm run test:stock:help` comprueba el ejercicio y las descargas tras el build. Los PDF se regeneran con `scripts/generate-stock-guides.py` y el runtime Python documentado en ese script.
 
 - Content Calendar mensual y semanal con filtros, ficha completa y acciones de crear, editar, duplicar, reprogramar y eliminar.
 - Plan editorial de septiembre de 2026: 2 publicaciones de feed y 2–3 Stories por semana, con reutilización de material.

@@ -4,7 +4,13 @@ Actualización: 2026-11-06. Contrato: [STOCK-PLANNING-SPEC.md](STOCK-PLANNING-SP
 
 ## Para explicarlo al equipo
 
-La primera vez que se abre el módulo en un navegador aparece una visita guiada de 12 pasos. Se puede saltar, terminar o repetir desde **Help & guides**. Tiene explicaciones en inglés y español, mantiene la fecha/vista/cantidades y no guarda datos de trabajo. El navegador recuerda únicamente el idioma y si ya se ha visto la visita; no identifica a cada empleado. En un dispositivo compartido, cada persona puede repetirla cuando quiera.
+La primera vez aparece una práctica guiada con **Plain Croissant**: el participante pulsa los controles, planifica, introduce recuentos, cierra el producto y prepara la semana siguiente. Las cantidades son ficticias y viven solo en memoria; no se envían al servidor ni cambian los registros reales. Instrucción y pantalla están separadas, con la sección y el producto siempre visibles y el control objetivo ampliado. Se puede salir, reiniciar o repetir desde **Help & guides**, en inglés/español. El navegador recuerda únicamente el idioma y si ya se ha visto la práctica; no identifica a cada empleado.
+
+El caso de práctica utiliza Suggested 18 + Preorders 2 = Planned 20; el participante cambia el plan a 26 por un evento, introduce el motivo y lo guarda solo en el simulador. Después registra 26 preparados, cuatro sobrantes (TGTG 2, reutilización 1 y descarte 1) y termina el cierre. La edición semanal afecta al viernes de la semana siguiente: 16 a 18, sin cambiar el cierre del ejemplo.
+
+La base real procede del **CSV extraído del Excel de Valentina**, con 26 productos y sus cantidades de lunes a domingo. Plain Croissant tiene 12 de lunes a jueves y 16 de viernes a domingo. El motor añade el método de la especificación; esto no significa que se haya reconstruido todo el sistema anterior de Valentina. Masas, congelador, histórico anual y reglas/factores de fase 3 pendientes se detallan más abajo.
+
+El espacio de trabajo real lee catálogo/ventas procedentes de Clover a través del feed de la web y guarda planes/recuentos en su propia base de datos. **No escribe en Clover ni cambia sus existencias o la disponibilidad de la web.** La práctica no escribe tampoco en la base de datos del dashboard.
 
 **Help & guides** también descarga las guías de seis páginas, [en inglés](https://edelweiss-marketing-dashboard.vercel.app/api/stock/guides/en) y [en español](https://edelweiss-marketing-dashboard.vercel.app/api/stock/guides/es). Las descargas requieren la sesión del dashboard. Los ejemplos de las guías son ficticios y no deben introducirse como recuentos reales.
 
