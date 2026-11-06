@@ -4,6 +4,10 @@ Actualización: 2026-11-06. Contrato: [STOCK-PLANNING-SPEC.md](STOCK-PLANNING-SP
 
 ## Para explicarlo al equipo
 
+La primera vez que se abre el módulo en un navegador aparece una visita guiada de 12 pasos. Se puede saltar, terminar o repetir desde **Help & guides**. Tiene explicaciones en inglés y español, mantiene la fecha/vista/cantidades y no guarda datos de trabajo. El navegador recuerda únicamente el idioma y si ya se ha visto la visita; no identifica a cada empleado. En un dispositivo compartido, cada persona puede repetirla cuando quiera.
+
+**Help & guides** también descarga las guías de seis páginas, [en inglés](https://edelweiss-marketing-dashboard.vercel.app/api/stock/guides/en) y [en español](https://edelweiss-marketing-dashboard.vercel.app/api/stock/guides/es). Las descargas requieren la sesión del dashboard. Los ejemplos de las guías son ficticios y no deben introducirse como recuentos reales.
+
 La herramienta reúne lo que se vende, lo que se prepara, lo que sobra y lo que se compra. Ayuda a preparar el día siguiente con datos y deja que el equipo ajuste las cantidades con su criterio. Las sugerencias requieren revisión; no hacen pedidos ni cambian Clover.
 
 1. **Antes de producir — Next bake.** Elegir la fecha y escribir el nombre. Revisar la sugerencia por producto y los encargos separados. Abrir “Why this quantity?” para entenderla, ajustar si hace falta y guardar cada producto. Los cambios superiores al 20 % requieren un motivo. Los planes ya guardados se conservan al recalcular.
@@ -59,6 +63,7 @@ npm test
 npm run lint
 npm run build
 npm run test:login:browser
+npm run test:stock:help
 npm run test:stock:http
 npm run test:stock:browser
 ```

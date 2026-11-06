@@ -50,3 +50,4 @@ next-env.d.ts
 
 # Generated previews and exports may contain private business data.
 /output/
+/tmp/pdfs/

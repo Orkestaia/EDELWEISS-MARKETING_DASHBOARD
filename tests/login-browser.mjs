@@ -19,6 +19,7 @@ try {
   assert.equal(ready, true, "isolated login server must be ready");
   browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE, headless: true });
   const context = await browser.newContext();
+  await context.addInitScript(() => localStorage.setItem("edelweiss-stock-tour-v1", "done"));
   const page = await context.newPage();
   await page.goto(origin + "/login");
   await page.getByLabel("Dashboard password", { exact: true }).fill(password);

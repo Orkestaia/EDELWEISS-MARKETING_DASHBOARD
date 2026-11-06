@@ -10,6 +10,7 @@ const nextConfig: NextConfig = {
     ] }];
   },
   outputFileTracingIncludes: {
+    "/api/stock/guides/*": ["./resources/stock-guides/*.pdf"],
     "/api/stock": ["./docs/stock-par-seed.csv"],
     "/api/stock/sync": ["./docs/stock-par-seed.csv"],
     "/api/cron/stock-snapshot": ["./docs/stock-par-seed.csv"],

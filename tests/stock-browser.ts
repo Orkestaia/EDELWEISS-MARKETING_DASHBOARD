@@ -21,6 +21,7 @@ try {
   for (let i = 0; i < 60; i++) { try { if ((await fetch(origin + "/login")).ok) break; } catch {} await new Promise(resolve => setTimeout(resolve, 500)); }
   browser = await chromium.launch({ executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE, headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+  await context.addInitScript(() => localStorage.setItem("edelweiss-stock-tour-v1", "done"));
   const login = await context.request.post(origin + "/api/auth/login", { headers: { Origin: origin }, form: { password: "stock-browser-password" }, maxRedirects: 0 });
   assert.equal(login.status(), 303);
   const page = await context.newPage();

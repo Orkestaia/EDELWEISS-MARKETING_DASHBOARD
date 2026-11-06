@@ -6,6 +6,7 @@
 .next/
 node_modules/
 output/
+tmp/
 coverage/
 test-results/
 playwright-report/
