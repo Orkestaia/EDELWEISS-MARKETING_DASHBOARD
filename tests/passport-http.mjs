@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { spawn } from "node:child_process";
-const origin = "http://127.0.0.1:3200";
-const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3200"], { env: { ...process.env, DATABASE_URL: "", DASHBOARD_PASSWORD: "test-only-password", DASHBOARD_SESSION_SECRET: "test-only-session-secret-at-least-32-characters", PASSPORT_INGEST_SECRET: "test-only-ingest", PASSPORT_READ_SECRET: "test-only-read", PASSPORT_REDEEM_SECRET: "test-only-redeem", CRON_SECRET: "test-only-cron" }, stdio: "ignore" });
+const origin = "http://127.0.0.1:3215";
+const child = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3215"], { env: { ...process.env, DATABASE_URL: "", DASHBOARD_PASSWORD: "test-only-password", DASHBOARD_SESSION_SECRET: "test-only-session-secret-at-least-32-characters", PASSPORT_INGEST_SECRET: "test-only-ingest", PASSPORT_READ_SECRET: "test-only-read", PASSPORT_REDEEM_SECRET: "test-only-redeem", CRON_SECRET: "test-only-cron" }, stdio: "ignore", windowsHide: true });
 try {
-  for (let i = 0; i < 60; i++) { try { if ((await fetch(`${origin}/login`)).ok) break; } catch {} await new Promise(r => setTimeout(r, 500)); }
+  let ready = false;
+  for (let i = 0; i < 60; i++) { if (child.exitCode !== null) break; try { if ((await fetch(`${origin}/login`)).ok) { ready = true; break; } } catch {} await new Promise(r => setTimeout(r, 500)); }
+  assert.equal(ready, true, "isolated Passport HTTP server must be ready");
   assert.equal((await fetch(origin, { redirect: "manual" })).status, 307);
   for (const path of ["/api/orders", "/api/sync?history=1", "/api/cron/sync", "/api/content", "/api/admin/passport", "/api/passport/card/invalid", "/api/cron/daily-sync"]) assert.equal((await fetch(origin + path)).status, 401, path);
   for (const path of ["/api/sync", "/api/passport/ingest", "/api/passport/rewards/validate", "/api/passport/rewards/redeem"]) assert.equal((await fetch(origin + path, { method: "POST", body: "{}" })).status, 401, path);
