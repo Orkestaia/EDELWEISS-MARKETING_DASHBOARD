@@ -58,6 +58,7 @@ La sincronización nocturna está definida en `vercel.json`, con protección Bea
 npm test
 npm run lint
 npm run build
+npm run test:login:browser
 npm run test:stock:http
 npm run test:stock:browser
 ```

@@ -38,3 +38,9 @@ Después de publicar se comprueba la URL canónica, redirección de páginas pri
 La contraseña de producción es de tipo sensitive: Vercel no devuelve su valor y no está en los archivos locales. La comprobación autenticada dentro de producción está pendiente del inicio de sesión del propietario en la pestaña abierta; no se ha desactivado autenticación ni cambiado la contraseña. La verificación de cuatro paneles con BD real y las pruebas de guardado/conflictos se realizaron previamente en el servidor local de producción descrito en stock-operations.md. No confundir esa evidencia con una prueba autenticada completada en Vercel.
 
 Este registro posterior a la publicación solo modifica documentación; el commit de aplicación desplegado sigue siendo 29f0c3b.
+
+## Corrección del formulario de acceso — 2026-11-06
+
+El primer inicio de sesión del propietario reveló un 403 Forbidden. Se reprodujo con el formulario HTML real en Chromium: la política global no-referrer provocaba Origin: null en la navegación POST y sameOrigin rechazaba la petición. Las pruebas anteriores del login enviaban Origin explícitamente y no detectaban ese caso.
+
+La corrección cambia únicamente la política global a same-origin; no acepta Origin null ni orígenes externos y conserva la validación CSRF, la contraseña y las cookies seguras. `npm run test:login:browser` comprueba el formulario nativo, el Origin generado por Chromium sin inyección, la sesión y el acceso a stock; también comprueba el rechazo de orígenes externos/nulos. Se ejecuta después del build, con Chromium instalado o PLAYWRIGHT_CHROMIUM_EXECUTABLE configurado.
