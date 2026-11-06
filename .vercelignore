@@ -1,0 +1,15 @@
+# Keep credentials and private local artifacts out of deployment uploads.
+.env*
+!.env.example
+.vercel/
+.git/
+.next/
+node_modules/
+output/
+coverage/
+test-results/
+playwright-report/
+passport-pwa/
+*.tsbuildinfo
+*.pem
+*.log

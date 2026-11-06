@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { BarChart3, Building2, CalendarClock, ChevronRight, PackageCheck, Search, ShoppingBag, Sparkles } from 'lucide-react';
 import type { OrdersAndRequestsData } from '@/lib/data';
 
@@ -45,9 +46,7 @@ export function OrdersDashboard({ data: initialData }: { data: OrdersAndRequests
     const latestDate = sales.reduce((latest, sale) => sale.date > latest ? sale.date : latest, new Date(0));
     const month = rankProducts(sales.filter(sale => sale.date.getMonth() === latestDate.getMonth() && sale.date.getFullYear() === latestDate.getFullYear()));
     const dayLeaders = weekdays.map((label, index) => ({ label, leader: rankProducts(sales.filter(sale => sale.date.getDay() === index))[0] }));
-    const windowStart = new Date(latestDate); windowStart.setDate(windowStart.getDate() - 27);
-    const plan = rankProducts(sales.filter(sale => sale.date >= windowStart)).map(item => ({ ...item, weeklyAverage: item.quantity / 4, suggested: Math.ceil(item.quantity / 4 * 1.15) })).slice(0, 12);
-    return { allTime, month, dayLeaders, plan, latestDate, totalUnits: sales.reduce((sum, sale) => sum + sale.quantity, 0) };
+    return { allTime, month, dayLeaders, latestDate, totalUnits: sales.reduce((sum, sale) => sum + sale.quantity, 0) };
   }, [filteredOrders]);
   return <section className="orders-dashboard">
     <div className="section-heading"><div><span className="eyebrow">Web operations · live via n8n</span><h2>Orders &amp; requests</h2><p>Orders since launch, special requests and wholesale opportunities in one place.</p></div><a className="sheet-link" href="https://docs.google.com/spreadsheets/d/1Y0U5fpS8AnCU0iiQELSVyBxCHYbxMNrbeiJmaF4V77I/edit" target="_blank" rel="noreferrer">Open Sheet <ChevronRight size={15}/></a></div>
@@ -60,7 +59,7 @@ export function OrdersDashboard({ data: initialData }: { data: OrdersAndRequests
         <article className="insight-card"><div className="card-title"><div><span className="eyebrow">Cumulative demand</span><h3>Top products</h3></div><small>Units</small></div><div className="product-ranking">{analytics.allTime.slice(0, 10).map((item, index) => <div key={item.name}><span className="rank">{index + 1}</span><div><strong>{item.name}</strong><i style={{width: `${item.quantity / (analytics.allTime[0]?.quantity || 1) * 100}%`}}/></div><b>{item.quantity}</b></div>)}</div></article>
         <article className="insight-card"><div className="card-title"><div><span className="eyebrow">Pickup pattern</span><h3>Best seller by weekday</h3></div></div><div className="weekday-leaders">{analytics.dayLeaders.map(item => <div key={item.label}><span>{item.label}</span><strong>{item.leader?.name || 'No sales'}</strong><b>{item.leader?.quantity || 0}</b></div>)}</div></article>
       </div>
-      <article className="insight-card production-plan"><div className="card-title"><div><span className="eyebrow">Planning guide · last 4 weeks</span><h3>Weekly production forecast</h3><p>Recent weekly average + 15% buffer. In-store sales and special orders are not included.</p></div><small>Updated {day.format(analytics.latestDate)}</small></div><div className="forecast-table"><div className="forecast-head"><span>Product</span><span>Avg/week</span><span>Suggested</span></div>{analytics.plan.map(item => <div key={item.name}><strong>{item.name}</strong><span>{item.weeklyAverage.toFixed(1)}</span><b>{item.suggested}</b></div>)}</div></article>
+      <article className="insight-card production-plan"><div className="card-title"><div><span className="eyebrow">Bakery operations</span><h3>Stock &amp; Production</h3><p>Plan the full bakery week and record actual production and leftovers.</p></div></div><Link className="primary" href="/stock">Open production planner <ChevronRight size={16}/></Link></article>
     </div>}
     <div className="orders-list">{view==='orders' && visibleOrders.map(order => <article key={order.orderId}><div className="order-date"><strong>{displayDate(order.pickupDate)}</strong><span>{order.pickupTime || 'Pickup'}</span></div><div className="order-main"><div><span className="eyebrow">#{order.orderId}</span>{order.isTest && <strong className="text-amber-800">TEST — DO NOT PREPARE</strong>}<h3>{order.customerName || 'Web customer'}</h3></div><p>{order.items}</p><div className="contact-line"><span>{order.customerEmail}</span><span>{order.customerPhone}</span>{order.notes && <span>{order.notes}</span>}</div></div><strong className="order-total">{money.format(order.totalUsd)}</strong></article>)}
     {view==='special' && visibleSpecial.map((order,i) => <article key={`${order.receivedAt}-${i}`}><div className="order-date"><strong>{displayDate(order.eventDate, 'TBD')}</strong><span>{order.guests ? `${order.guests} guests` : 'Special'}</span></div><div className="order-main"><div><span className="eyebrow">{order.eventType}</span><h3>{order.name}</h3></div><p>{order.message}</p><div className="contact-line"><span>{order.email}</span><span>{order.phone}</span></div></div></article>)}

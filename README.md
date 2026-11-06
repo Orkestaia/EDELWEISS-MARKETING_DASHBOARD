@@ -4,6 +4,8 @@ Centro operativo de marketing de Edelweiss Pastry Shop (Biddeford, Maine), const
 
 ## Funcionalidad
 
+- `Stock & Production` en `/stock`: recuentos y cierre móvil, plan semanal, sugerencias explicadas de producción, encargos agregados, eventos, comparaciones y registro privado de facturas alimentarias. Uso y límites actuales en [docs/stock-operations.md](docs/stock-operations.md); contrato con la web en [docs/STOCK-PLANNING-SPEC.md](docs/STOCK-PLANNING-SPEC.md).
+
 - Content Calendar mensual y semanal con filtros, ficha completa y acciones de crear, editar, duplicar, reprogramar y eliminar.
 - Plan editorial de septiembre de 2026: 2 publicaciones de feed y 2–3 Stories por semana, con reutilización de material.
 - `What we need from Edelweiss`: solicitudes sencillas pensadas para una sesión de 20–30 minutos cada dos semanas, sin exposición innecesaria.
@@ -23,14 +25,15 @@ npm run build
 
 ## Acceso privado obligatorio
 
-`Orders & requests` contiene nombres y datos de contacto. En Vercel la aplicación falla de forma segura con `503` hasta configurar credenciales de acceso. Añadir en Preview y Production:
+Las páginas y APIs internas requieren una sesión firmada. En Vercel el login falla de forma segura con `503` si faltan credenciales o almacenamiento compartido del límite de intentos. Configurar por entorno:
 
 ```text
-DASHBOARD_BASIC_USER=
-DASHBOARD_BASIC_PASSWORD=    # contraseña larga y exclusiva del dashboard
+DASHBOARD_PASSWORD=         # contraseña larga y exclusiva del dashboard
+DASHBOARD_SESSION_SECRET=   # secreto aleatorio de al menos 32 caracteres
+DATABASE_URL=               # Postgres privado, también para el límite de login
 ```
 
-No reutilizar la contraseña de Facebook, email ni ninguna cuenta personal. El cron queda fuera de Basic Auth porque ya exige `CRON_SECRET`.
+No reutilizar contraseñas de otras cuentas. Cookies HttpOnly, SameSite y Secure en producción; cambiar contraseña revoca sesiones anteriores. El cron exige `CRON_SECRET` y no usa la sesión del navegador. El login compartido todavía no identifica empleados ni distingue permisos individuales.
 
 ## Persistencia del calendario
 
@@ -100,11 +103,11 @@ CRON_SECRET=                 # cadena aleatoria larga, solo servidor
 
 ## Despliegue seguro
 
-1. Configurar las variables en Preview.
-2. Desplegar una preview y validar calendario, fichas, edición, `What we need`, sincronización y responsive.
-3. Repetir las variables en Production solo tras validar.
-4. Promover exactamente el artefacto validado con `vercel promote <preview-url>`.
-5. Revisar logs de funciones después de la promoción.
+1. Validar pruebas, build y preview con su configuración privada.
+2. Integrar las ramas revisadas en `main`, respetando la revisión del propietario cuando se solicite.
+3. Comprobar un checkout limpio de `main` y su coincidencia con `origin/main`.
+4. Ejecutar exclusivamente `npm run deploy:production`; el script comprueba rama, estado y remoto.
+5. Revisar acceso privado y estado de sincronización después del despliegue.
 
 El proyecto Vercel autorizado es `prj_fkRlAC7VvWH76mrx1v32vQHQxofN`. La producción actual es <https://edelweiss-marketing-dashboard.vercel.app/>.
 
