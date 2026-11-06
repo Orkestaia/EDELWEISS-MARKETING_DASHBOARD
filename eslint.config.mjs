@@ -11,6 +11,8 @@ const eslintConfig = defineConfig([
     ".next/**",
     "out/**",
     "build/**",
+    ".vercel/**",
+    "output/**",
     "next-env.d.ts", "passport-pwa/**", "test-results/**", "playwright-report/**",
   ]),
 ]);

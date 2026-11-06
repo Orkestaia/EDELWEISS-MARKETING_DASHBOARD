@@ -12,7 +12,10 @@ export function secureEqual(a: string, b: string) {
 function signature(payload: string) {
   const secret = process.env.DASHBOARD_SESSION_SECRET;
   if (!secret || secret.length < 32) throw new Error("Configure DASHBOARD_SESSION_SECRET with at least 32 characters");
-  return createHmac("sha256", secret).update(payload).digest("base64url");
+  const password = process.env.DASHBOARD_PASSWORD;
+  if (!password) throw new Error("Configure DASHBOARD_PASSWORD");
+  const passwordHash = createHash("sha256").update(password).digest("hex");
+  return createHmac("sha256", secret).update(`v2.${passwordHash}.${payload}`).digest("base64url");
 }
 export function createSession() {
   const payload = String(Date.now() + 8 * 60 * 60 * 1000);

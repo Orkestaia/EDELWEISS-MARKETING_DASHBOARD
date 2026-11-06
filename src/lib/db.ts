@@ -5,7 +5,7 @@ import type { Campaign, MarketingSnapshot, OperationsItem, SyncStatus } from "./
 import { campaigns, initialContent } from "./editorial-seed";
 
 const databaseUrl = process.env.DATABASE_URL;
-const sql = databaseUrl ? postgres(databaseUrl, { ssl: "require", max: 3, idle_timeout: 20 }) : null;
+const sql = databaseUrl ? postgres(databaseUrl, { ssl: { rejectUnauthorized: true }, max: 3, idle_timeout: 20 }) : null;
 
 export const isDatabaseConfigured = () => Boolean(sql);
 

@@ -7,7 +7,7 @@ let ready: Promise<void> | undefined;
 export async function passport() {
   if (!instance) {
     if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL is not configured");
-    const sql = postgres(process.env.DATABASE_URL, { ssl: "require", max: 3, idle_timeout: 20 });
+    const sql = postgres(process.env.DATABASE_URL, { ssl: { rejectUnauthorized: true }, max: 3, idle_timeout: 20 });
     const connection = (client: typeof sql | postgres.TransactionSql): Connection => ({
       query: async <T extends Row>(statement: string, values: unknown[] = []) => await client.unsafe(statement, values as postgres.ParameterOrJSON<never>[]) as unknown as T[]
     });

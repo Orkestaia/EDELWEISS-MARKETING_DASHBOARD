@@ -71,3 +71,4 @@ button, input, textarea, select { font: inherit; } button { cursor:pointer; }
 /* The restored Operations layout retains its own calendar and navigation styles. */
 :root { --ink:#1e2925; --muted:#68716c; --forest-2:#245548; --cocoa:#654538; }
 .mobile-nav { grid-template-columns:repeat(4,1fr); }
+.sidebar nav .stock-nav-link{display:flex;align-items:center;gap:11px;color:#f5ecd8;text-decoration:none;border:1px solid #ffffff30;border-radius:10px;padding:12px 14px;margin-bottom:8px}.mobile-nav .stock-nav-link{display:grid;place-items:center;color:var(--forest);font-weight:700;text-decoration:none;font-size:11px;background:#e6ddc9;border-radius:7px}

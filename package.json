@@ -9,7 +9,13 @@
     "lint": "eslint",
     "test:passport": "node --import tsx --test tests/passport.test.ts",
     "test:passport:http": "node tests/passport-http.mjs",
-    "deploy:production": "node scripts/deploy-production.mjs"
+    "deploy:production": "node scripts/deploy-production.mjs",
+    "test": "npm run test:stock && npm run test:passport",
+    "test:stock": "node scripts/test-stock.mjs",
+    "test:stock:http": "node tests/stock-http.mjs",
+    "test:stock:browser": "node --import tsx tests/stock-browser.ts",
+    "test:stock:live": "node --import tsx tests/stock-live-readonly.ts",
+    "sync:stock": "node --import tsx scripts/sync-stock.ts"
   },
   "dependencies": {
     "clsx": "^2.1.1",
