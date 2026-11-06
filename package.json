@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test:passport": "node --import tsx --test tests/passport.test.ts",
     "test:passport:http": "node tests/passport-http.mjs",
+    "test:login:browser": "node tests/login-browser.mjs",
     "deploy:production": "node scripts/deploy-production.mjs",
     "test": "npm run test:stock && npm run test:passport",
     "test:stock": "node scripts/test-stock.mjs",

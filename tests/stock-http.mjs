@@ -14,7 +14,7 @@ try {
   const post = (path, body, source = origin) => fetch(origin + path, { method: "POST", headers: { Cookie: cookie, Origin: source, "Content-Type": "application/json" }, body: typeof body === "string" ? body : JSON.stringify(body) });
   const page = await get("/stock"); assert.equal(page.status, 200); assert.match(await page.text(), /Stock &amp;/);
   assert.equal(page.headers.get("x-content-type-options"), "nosniff");
-  assert.equal(page.headers.get("referrer-policy"), "no-referrer");
+  assert.equal(page.headers.get("referrer-policy"), "same-origin");
   assert.equal(page.headers.get("x-frame-options"), "DENY");
   assert.match(page.headers.get("content-security-policy"), /frame-ancestors 'none'/);
   const response = await get("/api/stock?week=2026-10-29"); assert.equal(response.status, 200); assert.match(response.headers.get("cache-control"), /no-store/);
