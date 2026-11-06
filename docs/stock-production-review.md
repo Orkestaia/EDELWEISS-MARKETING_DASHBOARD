@@ -37,13 +37,15 @@ Después de publicar se comprueba la URL canónica, redirección de páginas pri
 
 La contraseña de producción es de tipo sensitive: Vercel no devuelve su valor y no está en los archivos locales. La comprobación autenticada dentro de producción está pendiente del inicio de sesión del propietario en la pestaña abierta; no se ha desactivado autenticación ni cambiado la contraseña. La verificación de cuatro paneles con BD real y las pruebas de guardado/conflictos se realizaron previamente en el servidor local de producción descrito en stock-operations.md. No confundir esa evidencia con una prueba autenticada completada en Vercel.
 
-Este registro posterior a la publicación solo modifica documentación; el commit de aplicación desplegado sigue siendo 29f0c3b.
+Este registro describe la publicación inicial 29f0c3b; los apartados siguientes recogen las actualizaciones.
 
 ## Corrección del formulario de acceso — 2026-11-06
 
 El primer inicio de sesión del propietario reveló un 403 Forbidden. Se reprodujo con el formulario HTML real en Chromium: la política global no-referrer provocaba Origin: null en la navegación POST y sameOrigin rechazaba la petición. Las pruebas anteriores del login enviaban Origin explícitamente y no detectaban ese caso.
 
 La corrección cambia únicamente la política global a same-origin; no acepta Origin null ni orígenes externos y conserva la validación CSRF, la contraseña y las cookies seguras. `npm run test:login:browser` comprueba el formulario nativo, el Origin generado por Chromium sin inyección, la sesión y el acceso a stock; también comprueba el rechazo de orígenes externos/nulos. Se ejecuta después del build, con Chromium instalado o PLAYWRIGHT_CHROMIUM_EXECUTABLE configurado.
+
+Corrección publicada mediante el script autorizado desde main `6ed96f96f3836af03b18d88add0ca33934ba5e54`, despliegue `dpl_Gynkhx3PzCnvjGn4aQaCEgNLLQ4V`, estado READY. Build, lint, 92 tests, dos suites HTTP y prueba del formulario nativo correctos. En la URL real se comprobó que el formulario con una credencial sintética no válida produce el comportamiento normal (303 a login con mensaje de contraseña incorrecta) en lugar de Forbidden; no se emplearon credenciales reales ni se creó una sesión de prueba en producción. Se comprobó también 403 para Origin null/externo y cero errores en los logs consultados. La página /login debe cargarse de nuevo para descartar la política anterior.
 
 El propietario confirmó posteriormente que ya puede iniciar sesión y que el módulo funciona.
 
@@ -53,4 +55,4 @@ Se añade una visita de 12 pasos EN/ES, automática la primera vez por navegador
 
 Las guías EN/ES tienen seis páginas Letter, fuentes embebidas y ejemplos ficticios; se han revisado las doce páginas renderizadas. Se versionan únicamente los PDF finales y su generador; las descargas pasan por una ruta autenticada con idiomas permitidos en/es, rutas fijas y no-store. Los originales no se ponen en public y los renders de revisión quedan excluidos de Git y Vercel.
 
-Corrección publicada mediante el script autorizado desde main `6ed96f96f3836af03b18d88add0ca33934ba5e54`, despliegue `dpl_Gynkhx3PzCnvjGn4aQaCEgNLLQ4V`, estado READY. Build, lint, 92 tests, dos suites HTTP y prueba del formulario nativo correctos. En la URL real se comprobó que el formulario con una credencial sintética no válida produce el comportamiento normal (303 a login con mensaje de contraseña incorrecta) en lugar de Forbidden; no se emplearon credenciales reales ni se creó una sesión de prueba en producción. Se comprobó también 403 para Origin null/externo y cero errores en los logs consultados. El propietario debe cargar de nuevo /login para descartar la política de la página anterior; el acceso con su contraseña sigue pendiente de su confirmación.
+Publicación de onboarding y PDF: main `1e897a1ea8c4b7694970a34d955e9b5ec6d06a05`, despliegue `dpl_GeN9mpWTQxn6k8ttSkDmNYfw19Zu`, READY en producción mediante npm run deploy:production. Build, lint, 92 tests y cinco recorridos HTTP/navegador correctos, incluida la visita completa en inglés/español a 320/390 px, teclado, ausencia de escrituras y descarga autenticada local de ambos PDF. Se confirmó en Vercel que las dos guías están empaquetadas, las descargas sin sesión devuelven 401, no hay artefactos privados inesperados y los logs consultados no contienen errores.
