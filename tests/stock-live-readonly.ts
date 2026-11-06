@@ -46,6 +46,7 @@ async function main() {
     if (!ready) throw new Error("server");
     browser = await chromium.launch({ headless: true, executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE ?? "C:/Users/aitor/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe" });
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 1 });
+    await context.addInitScript(() => localStorage.setItem("edelweiss-stock-tour-v1", "done"));
     // The normal login handler reserves a database-backed rate-limit slot.
     // Sign a temporary test session locally to keep this run GET-only.
     const expires = String(Date.now() + 60 * 60 * 1000);

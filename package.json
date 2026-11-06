@@ -15,6 +15,7 @@
     "test:stock": "node scripts/test-stock.mjs",
     "test:stock:http": "node tests/stock-http.mjs",
     "test:stock:browser": "node --import tsx tests/stock-browser.ts",
+    "test:stock:help": "node tests/stock-help-browser.mjs",
     "test:stock:live": "node --import tsx tests/stock-live-readonly.ts",
     "sync:stock": "node --import tsx scripts/sync-stock.ts"
   },

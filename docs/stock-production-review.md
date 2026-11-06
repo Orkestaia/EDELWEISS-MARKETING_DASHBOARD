@@ -45,4 +45,12 @@ El primer inicio de sesión del propietario reveló un 403 Forbidden. Se reprodu
 
 La corrección cambia únicamente la política global a same-origin; no acepta Origin null ni orígenes externos y conserva la validación CSRF, la contraseña y las cookies seguras. `npm run test:login:browser` comprueba el formulario nativo, el Origin generado por Chromium sin inyección, la sesión y el acceso a stock; también comprueba el rechazo de orígenes externos/nulos. Se ejecuta después del build, con Chromium instalado o PLAYWRIGHT_CHROMIUM_EXECUTABLE configurado.
 
+El propietario confirmó posteriormente que ya puede iniciar sesión y que el módulo funciona.
+
+## Visita guiada y guías de usuario
+
+Se añade una visita de 12 pasos EN/ES, automática la primera vez por navegador y repetible desde Help & guides. Solo cambia el estado de ayuda y desplaza el foco visual: no cambia vista, fecha ni cantidades y no envía escrituras. Durante la visita se bloquea la interacción con controles subyacentes; teclado, Escape y cierre restauran la interacción. Idioma y finalización se recuerdan localmente sin datos personales.
+
+Las guías EN/ES tienen seis páginas Letter, fuentes embebidas y ejemplos ficticios; se han revisado las doce páginas renderizadas. Se versionan únicamente los PDF finales y su generador; las descargas pasan por una ruta autenticada con idiomas permitidos en/es, rutas fijas y no-store. Los originales no se ponen en public y los renders de revisión quedan excluidos de Git y Vercel.
+
 Corrección publicada mediante el script autorizado desde main `6ed96f96f3836af03b18d88add0ca33934ba5e54`, despliegue `dpl_Gynkhx3PzCnvjGn4aQaCEgNLLQ4V`, estado READY. Build, lint, 92 tests, dos suites HTTP y prueba del formulario nativo correctos. En la URL real se comprobó que el formulario con una credencial sintética no válida produce el comportamiento normal (303 a login con mensaje de contraseña incorrecta) en lugar de Forbidden; no se emplearon credenciales reales ni se creó una sesión de prueba en producción. Se comprobó también 403 para Origin null/externo y cero errores en los logs consultados. El propietario debe cargar de nuevo /login para descartar la política de la página anterior; el acceso con su contraseña sigue pendiente de su confirmación.
