@@ -1,6 +1,6 @@
 # Stock y producción: uso y estado
 
-Actualización: 2026-11-06. Contrato: [STOCK-PLANNING-SPEC.md](STOCK-PLANNING-SPEC.md). La interfaz del equipo está en inglés, como establece el contrato.
+Actualización: 2026-11-11. Contrato: [STOCK-PLANNING-SPEC.md](STOCK-PLANNING-SPEC.md). La interfaz del equipo está en inglés, como establece el contrato.
 
 ## Para explicarlo al equipo
 
@@ -28,7 +28,7 @@ No se necesita introducir JSON ni gestionar proveedores para el recuento diario.
 ## Datos reales comprobados
 
 - Feed autenticado con la firma del contrato: catálogo de 135 artículos y una respuesta completa de ventas del día anterior. Nunca se han añadido credenciales de Clover.
-- Al menos 90 días completos de ventas almacenados; última captura validada: 2026-11-05. Se releen los siete más recientes para recoger devoluciones posteriores. Los errores y las fechas sin captura no se convierten en ventas cero.
+- Al menos 90 días completos de ventas almacenados; última captura validada: 2026-11-10. Se releen los siete más recientes para recoger devoluciones posteriores. Los errores y las fechas sin captura no se convierten en ventas cero.
 - 26 productos de planificación; 19 vinculados por coincidencias exactas o los alias explícitos del CSV. Las siete correspondencias restantes requieren confirmación, incluidas las dos denominaciones provisionales de Kuchen.
 - Tres facturas verificadas de dos proveedores alimentarios normalizadas en Postgres privado. No equivalen a todo el histórico de compras. Los abonos y descuentos negativos aún requieren revisión y no se contabilizan como compras positivas.
 
@@ -36,7 +36,7 @@ Las capturas históricas cumplen la parte de almacenamiento de la fase 1. Todav�
 
 ## Qué calcula y qué falta
 
-Revisión de Claude recibida el 11 de noviembre: el feed actual atribuye las ventas online al día de pago y puede incluir encargos futuros que se añaden de nuevo el día de recogida. **Ese doble conteo no está resuelto por subir el timeout.** No usar recomendaciones como rutina estándar hasta acordar y comprobar el feed v1.2 con conciliación entre fuentes. Thanksgiving permanece fuera de las asociaciones diarias; se bloquean vínculos de campaña/preventa identificables. Estado por orden de aceptación en [STOCK-VALIDATION-2026-11-11.md](STOCK-VALIDATION-2026-11-11.md) y coordinación autorizada en [STOCK-FEED-V1.2-HANDOFF-2026-11-11.md](STOCK-FEED-V1.2-HANDOFF-2026-11-11.md). Las capturas del 28 de octubre contienen ventas, por lo que esa fecha no se fuerza a cero.
+La revisión inicial de Claude detectó el doble conteo de encargos futuros en v1.1. El consumidor v1.2 ahora separa la demanda del día de pago y las recogidas y concilia las fuentes. Thanksgiving queda fuera de la base diaria por nombre y por IDs confirmados en el feed. Siguen pendientes las correspondencias, los parámetros y la comparación con Valentina antes de usar recomendaciones como estándar. El apartado siguiente y el documento de implementación recogen el estado actual; el registro de validación anterior conserva el historial de revisión.
 
 Confirmación posterior: Claude publica §4.7 en la web y se verifica una respuesta real con el nuevo consumidor. La base pasa a mostrador más online del mismo día y los encargos se concilian por `orderId`/`order_id`, conservando todos los artículos y sin duplicar filas de la Sheet. El histórico se refresca a v1.2 antes de dar la cobertura por completa. Detalles y límites en [STOCK-FEED-V1.2-IMPLEMENTATION-2026-11-11.md](STOCK-FEED-V1.2-IMPLEMENTATION-2026-11-11.md). El pedido del 28 de octubre es real POS a las 07:59. Su cierre global se conserva con las 12 unidades y sin convertirlo en cero.
 
