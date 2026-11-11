@@ -11,7 +11,7 @@ GET real firmado del 2026-11-10: HTTP 200, día completo, 133 artículos y ocho 
 - Las referencias opacas vistas en el feed se conservan solo en la tabla privada `stock_pickup_order_sources`. Si una devolución elimina una obligación de una captura refrescada, una copia antigua paid de la Sheet no la resucita. No se guardan emails, nombres de cliente, notas, direcciones ni cuerpos de correo. Las referencias no salen en DTOs, explicaciones ni logs.
 - Se exigen los 90 días completos v1.2 para aceptar recomendaciones con encargos conciliados. Las capturas completas v1.1 también se vuelven a solicitar, en secuencia y dentro del presupuesto existente. No se modifican planes manuales ni recuentos.
 - Releer sustituye la captura y sus obligaciones. Una actualización concurrente del feed mientras se carga la Sheet cambia la huella del contexto e impide guardar una recomendación calculada con fuentes distintas.
-- Thanksgiving sigue separado del vínculo diario. Una obligación de campaña sin correspondencia de producción confirmada queda pendiente y bloquea aceptar una recomendación incompleta. No se inventan asociaciones eliminando palabras del nombre. Los planes manuales siguen disponibles.
+- Thanksgiving sigue separado del vínculo diario. La guardia utiliza tanto el nombre como los IDs confirmados por `onlinePickups[].event`, incluidos artículos como Dinner Rolls (6) o tartas sin etiqueta Thanksgiving en el nombre. Se protege el guardado manual, la asociación automática y la materialización de ventas con enlaces antiguos. Una obligación de campaña sin correspondencia de producción confirmada queda pendiente y bloquea aceptar una recomendación incompleta. No se inventan asociaciones eliminando palabras del nombre. Los planes manuales siguen disponibles.
 - Review avisa de que las ventas se atribuyen al pago. Los planes v1.2 no se comparan en bias/WMAPE contra ese registro de otra fecha; la precisión queda pendiente de demanda comparable por recogida. No se fabrican métricas favorables.
 
 ## Límites
@@ -23,3 +23,11 @@ No se hacen pedidos ni escrituras en Clover o disponibilidad de la web. Se manti
 ## Pruebas
 
 Parser y privacidad; pedidos de varios artículos; pedidos iguales legítimos; cambio de fecha; cobertura incompleta; campaña sin asociar; conflictos; relectura idempotente; devolución sin resurrección desde Sheet; preservación del registro por pago; base 10 + 2 sin 50 unidades futuras; curva con denominador de mostrador y métricas comparables. Regresiones completas: 90 tests stock/compras/login y 10 Passport, build, TypeScript y ESLint.
+
+## Comprobación con datos reales
+
+Se han refrescado 90 días completos a v1.2, de 2026-08-13 a 2026-11-10, sin días pendientes. El balance de recogidas cuadra: 345 unidades OtherDay y 345 en `onlinePickups`, cero días con diferencias. Se han comparado huellas privadas antes/después: planes, recuentos y eventos intactos; el 28 de octubre mantiene un pedido y 12 unidades.
+
+Las consultas reales del 12 y 18 de noviembre verifican encargos sin incidencias. Plain Croissant usa base 5,5 y 4,75 respectivamente; el 18 excluye el cierre del 28 de octubre de sus cuatro muestras. Estas cantidades son resultados del cálculo y requieren revisión de bandejas/calendario por Valentina, no una orden automática de producción.
+
+Para el 25 de noviembre hay 26 registros pendientes de correspondencia de producción, y aceptar recomendaciones queda bloqueado. Los nombres de campaña observados incluyen Dinner Rolls (6), Walnut Schnecken (Thanksgiving), Apple & Cranberry Almond Tart 9 pulgadas, Pumpkin Tart 9 pulgadas, Blueberry & Lemon Scone (Thanksgiving), Pear Streusel Kuchen, Plain Croissant (Thanksgiving), Rosemary Focaccia (quarter), Almond Croissant (Thanksgiving) y Chocolate Croissant (Thanksgiving). Algunos requieren productos/formatos que no están entre los 26 iniciales. Se necesita una relación de producción separada y confirmada, sin vincular sus IDs de campaña a la base diaria.

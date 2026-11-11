@@ -56,6 +56,12 @@ export class StockService {
   private async audit(tx: Connection, entity: string, key: string, actor: string, payload: unknown) {
     await tx.query("insert into stock_audit(entity,entity_key,actor,payload) values ($1,$2,$3,$4::jsonb)", [entity, key, actor, JSON.stringify(payload)]);
   }
+  private async campaignIds(tx: Connection) {
+    const rows = await tx.query(`select distinct i->>'cloverItemId' as id from stock_feed_days f
+      cross join lateral jsonb_array_elements(coalesce(f.payload->'onlinePickups','[]'::jsonb)) i
+      where i->>'event'='thanksgiving' and i->>'cloverItemId' is not null`);
+    return new Set(rows.map(row => String(row.id)));
+  }
   async savePlan(body: Record<string, unknown>) {
     const date = dateKey(body.date), planned = quantity(body.planned), expected = version(body.version), actor = staffName(body.actor), reason = reasonText(body.reason);
     return this.db.transaction(async tx => {
@@ -101,7 +107,7 @@ export class StockService {
       if (body.cloverItemId) {
         const items = await tx.query("select clover_item_id,payload from stock_catalog where clover_item_id=$1", [body.cloverItemId]);
         if (!items.length) throw new StockError("Choose an item from the synced catalogue.");
-        if (isPreorderCatalogItem((items[0].payload as CatalogItem).name)) throw new StockError("Thanksgiving and preorder items must stay separate from daily products. Review their pickup orders instead.");
+        if (isPreorderCatalogItem((items[0].payload as CatalogItem).name) || (await this.campaignIds(tx)).has(String(body.cloverItemId))) throw new StockError("Thanksgiving and preorder items must stay separate from daily products. Review their pickup orders instead.");
         const owners = await tx.query("select product_key from plan_products where clover_item_id=$1 and product_key<>$2", [body.cloverItemId, p.key]);
         if (owners.length) throw new StockError("This Clover item is already linked to another product.", 409);
       }
@@ -122,9 +128,10 @@ export class StockService {
       await tx.query("select pg_advisory_xact_lock(7349813)");
       for (const item of items) await tx.query("insert into stock_catalog(clover_item_id,payload) values($1,$2::jsonb) on conflict(clover_item_id) do update set payload=excluded.payload", [item.cloverItemId, JSON.stringify(item)]);
       const products = await tx.query("select * from plan_products where clover_item_id is null and mapping_note='' order by product_key for update");
+      const campaignIds = await this.campaignIds(tx);
       let newlyMapped = false;
       for (const row of products) {
-        const matches = items.filter(i => !isPreorderCatalogItem(i.name) && normalized(i.name) === normalized(String(row.display_name)));
+        const matches = items.filter(i => !isPreorderCatalogItem(i.name) && !campaignIds.has(i.cloverItemId) && normalized(i.name) === normalized(String(row.display_name)));
         if (matches.length === 1) {
           const updated = await tx.query("update plan_products set clover_item_id=$2,price_cents=$3,version=version+1 where product_key=$1 and not exists(select 1 from plan_products where clover_item_id=$2) returning product_key", [row.product_key, matches[0].cloverItemId, matches[0].priceCents]);
           newlyMapped ||= updated.length > 0;
@@ -134,11 +141,12 @@ export class StockService {
     });
   }
   private async writeSales(tx: Connection, feed: SalesFeed) {
+    const campaignIds = await this.campaignIds(tx);
     await tx.query("delete from daily_sales where date=$1", [feed.date]);
     await tx.query(`insert into daily_sales(date,product_key,units_in_store,units_online,revenue_cents,first_sale_at,last_sale_at,hourly,stock_end)
       select $1,p.product_key,i."unitsInStore",i."unitsOnline",i."revenueCents",i."firstSaleAt",i."lastSaleAt",i.hourly,i."stockEnd"
       from jsonb_to_recordset($2::jsonb) as i("cloverItemId" text,"unitsInStore" numeric,"unitsOnline" numeric,"revenueCents" bigint,"firstSaleAt" time,"lastSaleAt" time,hourly jsonb,"stockEnd" integer)
-      join plan_products p on p.clover_item_id=i."cloverItemId"`,[feed.date,JSON.stringify(feed.items.filter(item => !isPreorderCatalogItem(item.name)))]);
+      join plan_products p on p.clover_item_id=i."cloverItemId"`,[feed.date,JSON.stringify(feed.items.filter(item => !isPreorderCatalogItem(item.name) && !campaignIds.has(item.cloverItemId ?? "")))]);
   }
   async saveSnapshot(raw: SalesFeed) {
     const feed = parseSales(raw, raw.date);
