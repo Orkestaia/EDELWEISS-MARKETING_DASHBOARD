@@ -14,6 +14,8 @@ export interface PlanningProduct {
 export interface PlanningSale {
   date: string;
   units: number;
+  /** v1.2 counter-only denominator; online payments do not train sell-out curves. */
+  inStoreUnits?: number;
   hourly: Readonly<Record<string, number>>;
   complete?: boolean;
   /** Optional explicit evidence, never inferred from a historical stock count. */

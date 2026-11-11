@@ -52,7 +52,7 @@ test("both feed endpoints allow a 12-second Clover response and expire attempts 
       options?.signal?.addEventListener("abort", () => reject(options.signal?.reason), { once: true });
       setTimeout(resolve, 12000);
     });
-    return Response.json(String(_url).includes("sales-daily") ? { date: "2026-11-06", timezone: "America/New_York", complete: true, generatedAt: "2026-11-07T07:30:00Z", items: [] } : { items: [] });
+    return Response.json(String(_url).includes("sales-daily") ? { date: "2026-11-06", timezone: "America/New_York", complete: true, generatedAt: "2026-11-07T07:30:00Z", items: [], onlinePickups: [] } : { items: [] });
   });
   for (const request of [() => feed.items(), () => feed.sales("2026-11-06")]) {
     const pending = request();

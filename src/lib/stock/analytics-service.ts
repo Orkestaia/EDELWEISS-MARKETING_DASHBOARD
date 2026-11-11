@@ -43,7 +43,7 @@ export class AnalyticsService {
       this.db.query("select s.date,s.product_key,s.units_in_store,s.units_online,s.revenue_cents from daily_sales s join stock_feed_days f on f.date=s.date where f.complete and s.date between $1 and $2", [first, last]),
       this.db.query("select date,complete from stock_feed_days where date between $1 and $2", [first, last]),
       this.db.query("select date,product_key,baked,leftover,tgtg,reused,discarded,sold_out,sold_out_at from daily_close where status='closed' and date between $1 and $2", [first, last]),
-      this.db.query("select date,product_key,suggested from plan_days where explain->'forecast'='true'::jsonb and date between $1 and $2", [first, last]),
+      this.db.query("select date,product_key,suggested,explain->>'method' as method from plan_days where explain->'forecast'='true'::jsonb and date between $1 and $2", [first, last]),
       this.db.query("select to_regclass('public.plan_events') is not null as available"),
     ]);
     const products: AnalyticsProduct[] = productRows.map(row => ({ id: String(row.product_key), name: String(row.display_name), family: String(row.family), mapped: row.clover_item_id != null }));
@@ -86,11 +86,12 @@ export class AnalyticsService {
       const averageTime = soldOut && times.length && times.every(Boolean) ? Math.round(times.reduce((sum, time) => sum + Number(time!.slice(0, 2)) * 60 + Number(time!.slice(3)), 0) / times.length) : null;
       return { date: day.date, units: day.units!, baked: aggregate("baked"), leftover: aggregate("leftover"), tgtg: aggregate("tgtg"), reused: aggregate("reused"), discarded: aggregate("discarded"),
         soldOut, soldOutAt: averageTime === null ? null : `${String(Math.floor(averageTime / 60)).padStart(2, "0")}:${String(averageTime % 60).padStart(2, "0")}`,
-        correctedDemand: allCloses && soldOut === false ? day.units : null,
+        correctedDemand: allCloses && soldOut === false && !forecasts.some(row => row?.method === "weekday-demand-v1.2") ? day.units : null,
         suggested: forecasts.every(Boolean) ? forecasts.reduce((sum, row) => sum + Number(row!.suggested), 0) : null };
     });
     const kpis = calculateKpis(kpiRows);
     const warnings: string[] = [];
+    if (plans.some(row => row.method === "weekday-demand-v1.2")) warnings.push("Sales comparisons use payment dates. Pickup-aware forecasts are excluded from accuracy until comparable pickup-date demand is measured; the sales ledger is unchanged.");
     if (!mapped.length) warnings.push("No selected products are linked to Clover. Sales and production totals are unavailable.");
     if (selected.length > mapped.length) warnings.push(`${selected.length - mapped.length} selected products are not linked to Clover and are excluded from these totals.`);
     const missingCurrent = current.filter(day => !day.complete && !day.closed).length;

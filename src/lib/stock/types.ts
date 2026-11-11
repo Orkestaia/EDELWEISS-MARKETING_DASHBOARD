@@ -13,10 +13,17 @@ export interface SalesItem {
   unitsTotal: number; revenueCents: number; firstSaleAt: string | null;
   lastSaleAt: string | null; hourly: Record<string, number>; stockEnd: number | null;
   refundedUnits?: number;
+  unitsOnlineSameDay?: number; unitsOnlineOtherDay?: number;
+  hourlyInStore?: Record<string, number>;
+}
+export interface OnlinePickup {
+  orderId: string; pickupDate: string; pickupTime: string | null;
+  cloverItemId: string | null; name: string; units: number; event: "thanksgiving" | null;
 }
 export interface SalesFeed {
   date: string; timezone: "America/New_York"; generatedAt: string; complete: boolean; items: SalesItem[];
   orders?: number; paidOrders?: number;
+  onlinePickups?: OnlinePickup[];
 }
 export interface PlanEntry {
   date: string; productKey: string; planned: number; baseline: number; reason: string; version: number;

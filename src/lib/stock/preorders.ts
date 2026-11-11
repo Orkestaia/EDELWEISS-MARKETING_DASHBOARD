@@ -1,5 +1,6 @@
 import Papa from "papaparse";
-import type { CatalogItem } from "./types";
+import type { CatalogItem, OnlinePickup } from "./types";
+import type { PickupContext } from "./pickup-context";
 
 export interface StockPreorderProduct { key: string; name: string; cloverItemId: string | null }
 export interface StockPreordersResult {
@@ -57,8 +58,9 @@ interface Candidate {
 }
 
 /** Pure extraction: no customer fields, order IDs or source records escape this boundary. */
-export function parseStockPreorders(csv: string, date: string, products: readonly StockPreorderProduct[], catalog: readonly CatalogItem[]): StockPreordersResult {
+export function parseStockPreorders(csv: string, date: string, products: readonly StockPreorderProduct[], catalog: readonly CatalogItem[], feed?: PickupContext): StockPreordersResult {
   try {
+    if (feed && !feed.complete) return { quantities: {}, status: { available: false, message: "Pickup-aware sales history is still syncing. Review orders before accepting a recommendation.", unmapped: 0 } };
     if (pickupDate(date) !== date || csv.length > MAX_BYTES || new TextEncoder().encode(csv).byteLength > MAX_BYTES) return unavailable();
     const parsed = Papa.parse<string[]>(csv, { skipEmptyLines: "greedy", delimiter: "," });
     if (parsed.errors.length || !parsed.data.length) return unavailable();
@@ -96,7 +98,31 @@ export function parseStockPreorders(csv: string, date: string, products: readonl
       const records = orders.get(id) ?? []; records.push(candidate); orders.set(id, records);
     }
     const quantities = new Map<string, number>();
-    for (const records of orders.values()) {
+    const feedOrders = new Map<string, Map<string, OnlinePickup>>();
+    const conflicts = new Set<string>();
+    for (const line of feed?.pickups ?? []) {
+      const lines = feedOrders.get(line.orderId) ?? new Map();
+      const key = line.cloverItemId ?? normalizedName(line.name), previous = lines.get(key);
+      if ((previous && JSON.stringify(previous) !== JSON.stringify(line)) || [...lines.values()].some(other => other.pickupDate !== line.pickupDate)) conflicts.add(line.orderId);
+      lines.set(key, line); feedOrders.set(line.orderId, lines);
+    }
+    for (const [id, lines] of feedOrders) {
+      if (![...lines.values()].some(line => line.pickupDate === date)) continue;
+      if (conflicts.has(id) || orders.get(id)?.some(row => row.excluded)) { unmapped++; continue; }
+      for (const line of lines.values()) {
+        const idKeys = products.filter(p => line.cloverItemId !== null && p.cloverItemId === line.cloverItemId).map(p => p.key);
+        const keys = idKeys.length ? new Set(idKeys) : names.get(normalizedName(line.name));
+        if (!keys || keys.size !== 1 || !Number.isSafeInteger(line.units) || line.units <= 0) { unmapped++; continue; }
+        const key = keys.values().next().value as string, count = (quantities.get(key) ?? 0) + line.units;
+        if (!Number.isSafeInteger(count)) return unavailable();
+        quantities.set(key, count);
+      }
+    }
+    const coveredIds = new Set([...(feed?.coveredOrderIds ?? []), ...feedOrders.keys()]);
+    for (const [id, records] of orders) {
+      // Feed order IDs are authoritative, including a pickup moved to another day.
+      // Keep every feed item; skip the entire matching Sheet order, not just one line.
+      if (coveredIds.has(id)) continue;
       // Cancellation/test evidence wins over earlier duplicate sale records.
       if (records.some(record => record.excluded)) continue;
       const bestScore = Math.max(...records.map(record => record.score));
@@ -161,7 +187,7 @@ async function boundedText(response: Response, signal: AbortSignal): Promise<str
 }
 
 /** Server-side bounded download of the single approved orders export. */
-export async function fetchStockPreorders(date: string, products: readonly StockPreorderProduct[], catalog: readonly CatalogItem[], request: typeof fetch = fetch): Promise<StockPreordersResult> {
+export async function fetchStockPreorders(date: string, products: readonly StockPreorderProduct[], catalog: readonly CatalogItem[], request: typeof fetch = fetch, feed?: PickupContext): Promise<StockPreordersResult> {
   if (pickupDate(date) !== date) return unavailable();
   const controller = new AbortController();
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -180,7 +206,7 @@ export async function fetchStockPreorders(date: string, products: readonly Stock
           url = allowedUrl(location, url.href); continue;
         }
         if (!response.ok) { void response.body?.cancel().catch(() => {}); throw new Error("Export unavailable"); }
-        return parseStockPreorders(await boundedText(response, controller.signal), date, products, catalog);
+        return parseStockPreorders(await boundedText(response, controller.signal), date, products, catalog, feed);
       }
       return unavailable();
     };

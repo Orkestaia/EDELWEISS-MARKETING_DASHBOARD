@@ -5,10 +5,12 @@ import type { CatalogItem, PlanEntry } from "./types";
 import { FAMILIES } from "./types";
 import type { Connection, Database, Row } from "./service";
 import { dateKey, largeOverride, quantity, reasonText, shiftDate, staffName, StockError, version, weekday } from "./domain";
+import { isPickupAwareFeed } from "./feed";
+import { pickupContext, type FeedDay, type PickupContext } from "./pickup-context";
 
 export interface PreorderProduct { key: string; name: string; cloverItemId: string | null }
 export interface PreorderResult { quantities: Record<string, number>; status: { available: boolean; message: string; unmapped: number } }
-export type PreorderLoader = (date: string, products: PreorderProduct[], catalog: CatalogItem[]) => Promise<PreorderResult>;
+export type PreorderLoader = (date: string, products: PreorderProduct[], catalog: CatalogItem[], feed?: PickupContext) => Promise<PreorderResult>;
 const defaults: PlanningSettings = { baseWeeks: 4, censorCap: 1.6, closingTime: "14:00" };
 const isoDay = (value: unknown) => new Date(String(value)).toISOString().slice(0, 10);
 const time = (value: unknown) => value == null ? null : String(value).slice(0, 5);
@@ -33,7 +35,7 @@ export class PlanningService {
     });
   }
   private async context(date: string, tx: Connection = this.db) {
-    const [products, sales, closes, events, settings, plans, catalog] = await Promise.all([
+    const [products, sales, closes, events, settings, plans, catalog, feedRows, coveredRows] = await Promise.all([
       tx.query("select * from plan_products where active order by family,display_name"),
       tx.query("select s.* from daily_sales s join stock_feed_days f on f.date=s.date where f.complete and s.date >= $1 and s.date < $2", [shiftDate(date, -400), date]),
       tx.query("select * from daily_close where date >= $1 and date < $2", [shiftDate(date, -400), date]),
@@ -41,23 +43,32 @@ export class PlanningService {
       tx.query("select value,version from plan_settings where key='forecast'"),
       tx.query("select * from plan_days where date=$1", [date]),
       tx.query("select payload from stock_catalog"),
+      tx.query("select date,complete,payload,generated_at from stock_feed_days order by date"),
+      tx.query("select order_id from stock_pickup_order_sources order by order_id"),
     ]);
-    return { products, sales, closes, events, settings: config(settings[0]?.value ?? defaults), plans, catalog: catalog.map(r => r.payload as CatalogItem) };
+    const feedDays: FeedDay[] = feedRows.map(row => ({ date: isoDay(row.date), complete: Boolean(row.complete), payload: row.payload as FeedDay["payload"], generatedAt: new Date(String(row.generated_at)).toISOString() }));
+    return { products, sales, closes, events, settings: config(settings[0]?.value ?? defaults), plans, catalog: catalog.map(r => r.payload as CatalogItem), feedDays, coveredOrderIds: coveredRows.map(row => String(row.order_id)) };
   }
   private event(r: Row): PlanningEvent & { version: number } { return { id: String(r.id), dateFrom: isoDay(r.date_from), dateTo: isoDay(r.date_to), name: String(r.name), factor: Number(r.factor), scope: r.scope as PlanningEvent["scope"], scopeValue: r.scope_value == null ? null : String(r.scope_value), closed: Boolean(r.closed), version: Number(r.version) }; }
   private async generate(date: string, tx: Connection, preorders?: PreorderResult) {
     const c = await this.context(date, tx);
-    const fingerprint=createHash("sha256").update(JSON.stringify({products:c.products.map(p=>[p.product_key,p.display_name,p.clover_item_id,p.version]),catalog:c.catalog.map(p=>[p.cloverItemId,p.name]).sort((a,b)=>String(a[0]).localeCompare(String(b[0])))})).digest("hex");
-    const source = preorders ?? await this.loadPreorders(date, c.products.map(p => ({ key: String(p.product_key), name: String(p.display_name), cloverItemId: p.clover_item_id == null ? null : String(p.clover_item_id) })), c.catalog);
+    const fingerprint=createHash("sha256").update(JSON.stringify({products:c.products.map(p=>[p.product_key,p.display_name,p.clover_item_id,p.version]),catalog:c.catalog.map(p=>[p.cloverItemId,p.name]).sort((a,b)=>String(a[0]).localeCompare(String(b[0]))),feed:c.feedDays.map(day=>[day.date,day.complete,day.generatedAt,day.payload]),covered:c.coveredOrderIds})).digest("hex");
+    const source = preorders ?? await this.loadPreorders(date, c.products.map(p => ({ key: String(p.product_key), name: String(p.display_name), cloverItemId: p.clover_item_id == null ? null : String(p.clover_item_id) })), c.catalog, { ...pickupContext(c.feedDays), coveredOrderIds: c.coveredOrderIds });
+    const feedByDate = new Map(c.feedDays.filter(day => day.complete && isPickupAwareFeed(day.payload)).map(day => [day.date, day.payload]));
     const rows = c.products.map(p => {
       const productKey = String(p.product_key), pars = [p.par_mon,p.par_tue,p.par_wed,p.par_thu,p.par_fri,p.par_sat,p.par_sun].map(Number);
       const history = c.sales.filter(s => s.product_key === productKey);
-      const valid = history.filter(s => Number(s.units_in_store) + Number(s.units_online) >= 0 && Object.values(s.hourly as Record<string,number>).every(n => n >= 0));
+      const valid = history.flatMap(s => {
+        const item = feedByDate.get(isoDay(s.date))?.items.find(item => item.cloverItemId === p.clover_item_id);
+        if (!item || item.unitsOnlineSameDay === undefined || !item.hourlyInStore || item.unitsInStore < 0 || item.unitsOnlineSameDay < 0 || Object.values(item.hourlyInStore).some(n => n < 0)) return [];
+        return [{ date: isoDay(s.date), units: item.unitsInStore + item.unitsOnlineSameDay, inStoreUnits: item.unitsInStore, hourly: item.hourlyInStore, complete: true }];
+      });
       const result = calculatePlan({ date, product: { key: productKey, family: p.family as typeof FAMILIES[number], pars, unitsPerTray: Number(p.units_per_tray), bufferK: Number(p.buffer_k), targetSelloutTime: time(p.target_sellout_time)! },
-        sales: valid.map(s => ({ date: isoDay(s.date), units: Number(s.units_in_store) + Number(s.units_online), hourly: s.hourly as Record<string,number>, complete: true })),
+        sales: valid,
         closes: c.closes.filter(s => s.product_key === productKey).map(s => ({ date: isoDay(s.date), baked: s.baked == null ? null : Number(s.baked), leftover: s.leftover == null ? null : Number(s.leftover), soldOut: Boolean(s.sold_out), soldOutAt: time(s.sold_out_at), status: s.status as "draft"|"closed" })),
         events: c.events.map(e => this.event(e)), settings: c.settings, preorders: quantity(source.quantities[productKey] ?? 0) });
-      if (valid.length !== history.length) result.explain.warnings.push("Days with negative refund adjustments were excluded from demand estimation; the original sales ledger is preserved.");
+      if (valid.length !== history.length) result.explain.warnings.push("Historical days without a verified v1.2 split or with negative adjustments were excluded from demand estimation; the payment-date ledger is preserved.");
+      result.explain.summary += " Base demand includes counter sales and same-day online units only. Other-day online orders are counted on pickup dates, once across the feed and Sheet.";
       if (!source.status.available || source.status.unmapped) result.explain.warnings.push(source.status.message);
       const previous = c.plans.find(r => r.product_key === productKey);
       return { productKey, name: String(p.display_name), family: String(p.family), manualPar: pars[weekday(date)], unitsPerTray: Number(p.units_per_tray), ...result,
@@ -81,7 +92,7 @@ export class PlanningService {
       if (row.explain.preordersRequireReview) throw new StockError("This closed day has pickup orders. Resolve those orders before accepting the plan.",409);
       const baseline = row.planned;
       if (largeOverride(planned,baseline) && !reason) throw new StockError("Add a reason for a change greater than 20% of the recommendation.");
-      const explanation = { ...row.explain, method: "weekday-demand-v1", forecast: true, preorders: row.preorders, suggested: row.suggested, calculatedPlanned: baseline };
+      const explanation = { ...row.explain, method: "weekday-demand-v1.2", forecast: true, preorders: row.preorders, suggested: row.suggested, calculatedPlanned: baseline };
       await tx.query(`insert into plan_days(date,product_key,suggested,planned,override_reason,explain,created_by,version) values($1,$2,$3,$4,$5,$6::jsonb,$7,$8)
        on conflict(date,product_key) do update set suggested=excluded.suggested,planned=excluded.planned,override_reason=excluded.override_reason,explain=excluded.explain,created_by=excluded.created_by,version=excluded.version`,[date,row.productKey,row.suggested,planned,reason,JSON.stringify(explanation),actor,expected+1]);
       await tx.query("insert into stock_audit(entity,entity_key,actor,payload) values('forecast-plan',$1,$2,$3::jsonb)", [`${date}/${row.productKey}`,actor,JSON.stringify({before:row.existingPlan,planned,explain:explanation})]);

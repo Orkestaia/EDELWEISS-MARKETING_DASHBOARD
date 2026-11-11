@@ -146,14 +146,18 @@ export class StockService {
       await tx.query("select pg_advisory_xact_lock(7349813)");
       const rows = await tx.query(`insert into stock_feed_days(date,complete,generated_at,payload) values($1,$2,$3,$4::jsonb)
         on conflict(date) do update set complete=excluded.complete,generated_at=excluded.generated_at,payload=excluded.payload,received_at=now()
-        where excluded.generated_at >= stock_feed_days.generated_at and (not stock_feed_days.complete or excluded.complete) returning date`, [feed.date, feed.complete, feed.generatedAt, JSON.stringify(feed)]);
+        where excluded.generated_at >= stock_feed_days.generated_at and (not stock_feed_days.complete or excluded.complete)
+        and (not (stock_feed_days.payload ? 'onlinePickups') or excluded.payload ? 'onlinePickups') returning date`, [feed.date, feed.complete, feed.generatedAt, JSON.stringify(feed)]);
       if (!rows.length) return false;
+      if (feed.onlinePickups) await tx.query(`insert into stock_pickup_order_sources(order_id,paid_date)
+        select distinct i."orderId",$1::date from jsonb_to_recordset($2::jsonb) as i("orderId" text)
+        on conflict(order_id) do nothing`, [feed.date, JSON.stringify(feed.onlinePickups)]);
       await this.writeSales(tx, feed);
       return true;
     });
   }
   async missingDates(today: string) {
-    const rows = await this.db.query("select date from stock_feed_days where complete and date between $1 and $2", [shiftDate(today, -90), shiftDate(today, -1)]);
+    const rows = await this.db.query("select date from stock_feed_days where complete and payload ? 'onlinePickups' and date between $1 and $2", [shiftDate(today, -90), shiftDate(today, -1)]);
     const complete = new Set(rows.map(r => day(r.date)));
     return Array.from({ length: 90 }, (_, i) => shiftDate(today, -i - 1)).filter(d => !complete.has(d));
   }

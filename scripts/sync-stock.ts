@@ -6,6 +6,7 @@ import { WebsiteFeed } from "../src/lib/stock/feed";
 import { syncStock } from "../src/lib/stock/sync";
 import { maineDate } from "../src/lib/stock/domain";
 import { stockParameters } from "../src/lib/stock/postgres-parameters";
+import { isPickupAwareFeed } from "../src/lib/stock/feed";
 
 async function main() {
   loadEnvConfig(process.cwd());
@@ -23,14 +24,17 @@ async function main() {
       if (count === 1 || count % 10 === 0) console.log(JSON.stringify({ progress: { received: count, lastDate: date, complete: result.complete } }));
       return result;
     } };
-    for (let run = 0; run < 4; run++) {
+    for (let run = 0; run < 8; run++) {
       const result = await syncStock(service, observedFeed);
       console.log(JSON.stringify({ run: run + 1, ...result }));
       if (result.status === "error") throw new Error("Stock synchronization failed.");
       if (result.status !== "partial") break;
     }
     const view = await service.view(maineDate(), true);
-    console.log(JSON.stringify({ storedCompleteDays: view.snapshots.filter(s => s.complete).length, products: view.products.length, linkedProducts: view.products.filter(p => p.cloverItemId).length, pendingProductReview: view.products.filter(p => !p.cloverItemId).map(p => p.name) }));
+    const pending = await service.missingDates(maineDate());
+    const captures = await connection(sql).query("select payload from stock_feed_days where complete");
+    console.log(JSON.stringify({ storedCompleteDays: view.snapshots.filter(s => s.complete).length, pickupAwareCompleteDays: captures.filter(row => isPickupAwareFeed(row.payload as import("../src/lib/stock/types").SalesFeed)).length, pendingPickupAwareDays: pending.length, products: view.products.length, linkedProducts: view.products.filter(p => p.cloverItemId).length, pendingProductReview: view.products.filter(p => !p.cloverItemId).map(p => p.name) }));
+    if (pending.length) throw new Error("Pickup-aware backfill is incomplete; resume synchronization.");
   } finally { await sql.end(); }
 }
 void main().catch(() => { console.error("Stock synchronization could not finish. Check the private configuration and sync status; secrets have not been printed."); process.exitCode = 1; });

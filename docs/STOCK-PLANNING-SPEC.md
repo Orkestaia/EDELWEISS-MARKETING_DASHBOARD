@@ -250,6 +250,8 @@ under Clover rate limits.
 
 ## Changelog
 
+- 2026-11-11 dashboard v1.2 consumer: verified live split/pickups response; planning base uses in-store plus same-day online, pickup obligations union with Sheet by Clover order id, counter-only sell-out curves, durable private order provenance for refreshed/refunded captures, and pickup-aware historical backfill. Payment-date ledger, manual plans, daily closes, Thanksgiving mapping guard and Clover read-only boundary preserved. See `docs/STOCK-FEED-V1.2-IMPLEMENTATION-2026-11-11.md` for coverage and acceptance limits.
+
 - 2026-11-06 dashboard continuation: phase 2 planning engine, explained Next bake, confirmed preorder aggregation, versioned parameters/events and private food-supplier invoice ledger implemented. Initial real sales capture and invoice samples verified. Comparisons/KPIs added with explicit data coverage; phase 3 history import, season factor and safety rules, and phase 4 remain pending. Website endpoints and signature contract unchanged. Historical queried stock is not used as proof of sell-out. See `docs/stock-operations.md` for acceptance gates and security boundaries. No production deployment from the feature branch.
 
 - 2026-10-29 dashboard phase 1: website API unchanged; client follows section 4.6 including null IDs, fractional sales, seven-day refund refresh and history-window responses. Local draft/final closes, optimistic versions, audit, raw captures/catalogue and sync status/lease added. Running counts support mobile entry with explicit actual-production confirmation. Staff names are self-reported under the existing shared login. See `docs/stock-phase-one.md` for assumptions and acceptance gates. Stock writes remain in section 8 phase 4.
