@@ -47,7 +47,7 @@ export class WebsiteFeed implements FeedSource {
   private async get(path: string) {
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
-        const response = await this.request(FEED_ORIGIN + path, { method: "GET", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(10000), headers: { "x-edelweiss-signature": feedSignature(this.secret, path), Accept: "application/json" } });
+        const response = await this.request(FEED_ORIGIN + path, { method: "GET", cache: "no-store", redirect: "error", signal: AbortSignal.timeout(30000), headers: { "x-edelweiss-signature": feedSignature(this.secret, path), Accept: "application/json" } });
         if (response.status >= 500 && attempt === 0) continue;
         if (response.status === 422) {
           const body: unknown = await response.json();

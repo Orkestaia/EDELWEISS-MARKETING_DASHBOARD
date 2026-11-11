@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { stockSchema } from "./schema";
 import { dateKey, largeOverride, maineDate, monday, quantity, reasonText, shiftDate, staffName, StockError, validateClose, version, weekday } from "./domain";
 import { parseCatalog, parseSales } from "./feed";
+import { isPreorderCatalogItem } from "./catalog-policy";
 import type { CatalogItem, CloseEntry, PlanEntry, Product, SalesFeed, StockData } from "./types";
 
 export type Row = Record<string, unknown>;
@@ -98,8 +99,9 @@ export class StockService {
       const p = await this.product(tx, body.productKey);
       if (p.version !== expected) throw new StockError("Someone changed this product. Reload first.", 409);
       if (body.cloverItemId) {
-        const items = await tx.query("select clover_item_id from stock_catalog where clover_item_id=$1", [body.cloverItemId]);
+        const items = await tx.query("select clover_item_id,payload from stock_catalog where clover_item_id=$1", [body.cloverItemId]);
         if (!items.length) throw new StockError("Choose an item from the synced catalogue.");
+        if (isPreorderCatalogItem((items[0].payload as CatalogItem).name)) throw new StockError("Thanksgiving and preorder items must stay separate from daily products. Review their pickup orders instead.");
         const owners = await tx.query("select product_key from plan_products where clover_item_id=$1 and product_key<>$2", [body.cloverItemId, p.key]);
         if (owners.length) throw new StockError("This Clover item is already linked to another product.", 409);
       }
@@ -122,7 +124,7 @@ export class StockService {
       const products = await tx.query("select * from plan_products where clover_item_id is null and mapping_note='' order by product_key for update");
       let newlyMapped = false;
       for (const row of products) {
-        const matches = items.filter(i => normalized(i.name) === normalized(String(row.display_name)));
+        const matches = items.filter(i => !isPreorderCatalogItem(i.name) && normalized(i.name) === normalized(String(row.display_name)));
         if (matches.length === 1) {
           const updated = await tx.query("update plan_products set clover_item_id=$2,price_cents=$3,version=version+1 where product_key=$1 and not exists(select 1 from plan_products where clover_item_id=$2) returning product_key", [row.product_key, matches[0].cloverItemId, matches[0].priceCents]);
           newlyMapped ||= updated.length > 0;
@@ -136,7 +138,7 @@ export class StockService {
     await tx.query(`insert into daily_sales(date,product_key,units_in_store,units_online,revenue_cents,first_sale_at,last_sale_at,hourly,stock_end)
       select $1,p.product_key,i."unitsInStore",i."unitsOnline",i."revenueCents",i."firstSaleAt",i."lastSaleAt",i.hourly,i."stockEnd"
       from jsonb_to_recordset($2::jsonb) as i("cloverItemId" text,"unitsInStore" numeric,"unitsOnline" numeric,"revenueCents" bigint,"firstSaleAt" time,"lastSaleAt" time,hourly jsonb,"stockEnd" integer)
-      join plan_products p on p.clover_item_id=i."cloverItemId"`,[feed.date,JSON.stringify(feed.items)]);
+      join plan_products p on p.clover_item_id=i."cloverItemId"`,[feed.date,JSON.stringify(feed.items.filter(item => !isPreorderCatalogItem(item.name)))]);
   }
   async saveSnapshot(raw: SalesFeed) {
     const feed = parseSales(raw, raw.date);
