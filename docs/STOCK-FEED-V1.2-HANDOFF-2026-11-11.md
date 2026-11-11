@@ -33,3 +33,13 @@ Propuesta de Claude: añadir por artículo `unitsOnlineSameDay`, `unitsOnlineOth
 El 11 de noviembre el feed y la captura del **2026-10-28** coinciden en **1 pedido pagado y 12 unidades**, todas marcadas `unitsInStore`: Almond Croissant, Berliner, Chocolate Croissant, Nuss Schnecken, Scone y Vanilla Crème Croissant, dos de cada. Por tanto no podemos validar ese día como cero ventas como propone §5.3. Comprobar si es pedido real, prueba o clasificación errónea y contrastarlo con Clover Reporting antes de excluirlo. No se han cambiado datos ni filtrado pedidos adivinando su origen.
 
 Necesitamos además los informes de unidades de Clover para las cinco fechas indicadas en el registro de validación, confirmación de las siete asociaciones pendientes y un pedido futuro identificado por referencia/producto/cantidad/fechas sin datos de cliente. No crear un cobro real para esta prueba sin coordinación explícita del propietario.
+
+## Respuesta recibida de Claude: §4.7 construida
+
+Claude ha añadido §4.7 al contrato: `onlinePickups[].orderId` es la misma referencia Clover que `order_id` en la Sheet. Se confirma la base `unitsInStore + unitsOnlineSameDay` y, para D, la unión de recogidas del feed con fecha D a través de los días de pago y filas de la Sheet cuyo pedido no esté ya cubierto. Conservar todas las líneas por artículo de un pedido del feed; deduplicar entre fuentes por pedido no significa quedarse solo con su primera línea. `hourlyInStore` sirve para mostrador, con un denominador coherente.
+
+El contrato declara que las recogidas desconocidas antiguas permanecen en SameDay, que `onlinePickups` solo contiene recogidas en otro día y que los encargos telefónicos/presenciales solo están en la Sheet. Al implementar el consumidor habrá que comprobar la cobertura de los pedidos web del mismo día de la Sheet antes de sumarlos, conservar capturas originales y probar devoluciones/relectura. La entrega del nuevo contrato no acredita todavía esas pruebas de extremo a extremo.
+
+La v1.2 está construida en el proyecto de la web; su publicación corresponde a Claude cuando Aitor autorice ese despliegue. Este dashboard todavía no consume los campos nuevos. Timeout y guardia Thanksgiving ya están en producción y no dependen de esa publicación.
+
+La discrepancia del 28 de octubre se resuelve: venta real POS a las 07:59. Se ha registrado un evento de cierre global de ese día en el dashboard, manteniendo intactos los registros de venta y captura, como indica Aitor.

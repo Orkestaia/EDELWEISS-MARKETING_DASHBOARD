@@ -256,3 +256,30 @@ under Clover rate limits.
 
 - 2026-10-28 v1: first version (Claude).
 - 2026-10-29 v1.1: section 4.6 added; read endpoints built and tested; extra additive fields documented. Phase 4 write endpoint not built.
+
+## 4.7 Contract v1.2 — pick-up day split and order ids (2026-11-11, additive)
+
+Built in the website after Aitor approved the review (`docs/STOCK-REVIEW-2026-11-06.md`). All v1.1 fields keep their meaning.
+
+`GET /api/internal/sales-daily` adds, per item:
+
+| Field | Meaning |
+|---|---|
+| `unitsOnlineSameDay` | online units paid that day whose pick-up date is the same day (or unknown, for very old orders) |
+| `unitsOnlineOtherDay` | online units paid that day for pick-up on another date; `unitsOnline = SameDay + OtherDay` |
+| `hourlyInStore` | counter sales only, by Maine hour. Use this for sell-out curves; `hourly` still includes online units at payment time |
+
+and, top level, `onlinePickups`: one entry per (Clover order, item) for every online line paid that day with a pick-up date other than that day:
+
+```json
+{ "orderId": "A4TP634P3P7K0", "pickupDate": "2026-11-25", "pickupTime": "10:00",
+  "cloverItemId": "DS451ENN9BTXP", "name": "Thanksgiving Apple Cranberry Tart", "units": 1, "event": "thanksgiving" }
+```
+
+- `orderId` is the Clover order id, the same value the n8n sheet stores in `order_id`. Dedupe on it.
+- `event` is `"thanksgiving"` when the order note carries `Event: Thanksgiving pre-order`, else `null`.
+- No customer data is included.
+
+Recommended use: base demand = `unitsInStore + unitsOnlineSameDay`; pre-orders for date D = union of `onlinePickups` with `pickupDate = D` (from all paid days) and sheet rows with pickup D whose `order_id` is not already in that set. Phone/in-person pre-orders only exist in the sheet.
+
+Changelog: 2026-11-11 v1.2 built and tested against real Clover; deployed once Aitor approves the release.
