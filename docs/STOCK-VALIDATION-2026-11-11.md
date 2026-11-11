@@ -57,3 +57,9 @@ No elevar las recomendaciones a rutina estándar mientras sigan abiertos los pas
 ## Verificación técnica de esta corrección
 
 84 tests de stock/compras/login más 10 de Passport correctos, incluido el rechazo de enlaces Thanksgiving y el timeout con reloj simulado. ESLint, TypeScript y build de producción correctos. HTTP de stock y recorrido de navegador con base aislada correctos: recuento, guardado/recarga, cierre rápido, reintento, conflicto entre dispositivos, motivos del plan, valores recurrentes y móvil de 320 px. El entorno restringido bloqueaba la compilación y las conexiones/arranque del navegador; las mismas comprobaciones se completaron con ejecución autorizada. No se alteraron las comprobaciones para hacerlas pasar ni se escribieron registros de prueba en producción.
+
+## Publicación
+
+Publicada el 11 de noviembre mediante `npm run deploy:production` desde main limpio, integrado y coincidente con origin/main: `f1b7f7f2bec48f17d71b55fe9e93b46664e6febd`, feature `01b165b`. Vercel `dpl_At4eH37m4S5wdYGqM3x1pGEH5xK8`, READY, target production y alias canónico confirmados mediante el conector Vercel. Login 200, página privada 307 y APIs/guía 401 sin sesión. Inventario remoto: 215 archivos, dos guías esperadas y ningún archivo privado inesperado de entorno/output/tmp. Consulta de logs de error: sin entradas para el despliegue en el intervalo consultado.
+
+Esta publicación incorpora únicamente timeout y protecciones de asociaciones; NO implementa v1.2 ni resuelve el doble conteo de pedidos futuros. La coordinación está preparada para que Aitor la entregue a Claude; no se ha enviado un mensaje externo ni modificado el repositorio de la web.
