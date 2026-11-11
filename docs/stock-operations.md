@@ -36,6 +36,8 @@ Las capturas históricas cumplen la parte de almacenamiento de la fase 1. Todav�
 
 ## Qué calcula y qué falta
 
+Revisión de Claude recibida el 11 de noviembre: el feed actual atribuye las ventas online al día de pago y puede incluir encargos futuros que se añaden de nuevo el día de recogida. **Ese doble conteo no está resuelto por subir el timeout.** No usar recomendaciones como rutina estándar hasta acordar y comprobar el feed v1.2 con conciliación entre fuentes. Thanksgiving permanece fuera de las asociaciones diarias; se bloquean vínculos de campaña/preventa identificables. Estado por orden de aceptación en [STOCK-VALIDATION-2026-11-11.md](STOCK-VALIDATION-2026-11-11.md) y coordinación autorizada en [STOCK-FEED-V1.2-HANDOFF-2026-11-11.md](STOCK-FEED-V1.2-HANDOFF-2026-11-11.md). Las capturas del 28 de octubre contienen ventas, por lo que esa fecha no se fuerza a cero.
+
 El motor usa los últimos cuatro mismos días de semana válidos; con menos de tres usa la cantidad manual. Excluye eventos y cierres, aplica factores y margen por variabilidad, redondea a bandejas y añade los encargos confirmados por separado. La corrección de demanda por agotado requiere evidencia de cierre y una curva horaria fiable; el stock actual de Clover no prueba un agotado histórico. Los ajustes negativos por devoluciones se conservan en el registro de ventas y se excluyen de la estimación de demanda con aviso.
 
 La fuente de encargos se lee solo en servidor y entrega al módulo cantidades por producto, sin datos de clientes. Si no está disponible, contiene fechas/estados ambiguos o productos sin correspondencia, se muestra el problema y no se permite aceptar una recomendación incompleta. El plan manual sigue disponible para que el equipo lo resuelva conscientemente.
