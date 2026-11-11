@@ -35,6 +35,17 @@ test("daily products cannot acquire Thanksgiving or explicitly labelled preorder
     // Everyday seasonal products are valid: Seasonal Quiche is not a holiday preorder.
     const quiche = seed.find(p => p.key === "quiche")!;
     await service.saveProduct({ productKey: quiche.key, version: 2, pars: quiche.pars, actor: "Validation", cloverItemId: "daily" });
+    const unlabelled = item("campaign", "Dinner Rolls (6)");
+    await service.saveCatalog([unlabelled]);
+    await service.saveSnapshot({ ...feed, date: "2026-11-07", generatedAt: "2026-11-08T08:00:00Z", items: [{ ...feed.items[0], cloverItemId: unlabelled.cloverItemId, name: unlabelled.name, unitsOnlineSameDay: 0, unitsOnlineOtherDay: 5, hourlyInStore: {} }], onlinePickups: [{ orderId: "fixture-campaign", pickupDate: "2026-11-25", pickupTime: "10:00", cloverItemId: unlabelled.cloverItemId, name: unlabelled.name, units: 5, event: "thanksgiving" }] });
+    await assert.rejects(() => service.saveProduct({ productKey: "plain", version: 1, pars: plain.pars, actor: "Validation", cloverItemId: "campaign" }), /Thanksgiving/);
+    await pg.query("update plan_products set clover_item_id=null,display_name='Dinner Rolls (6)' where product_key='plain'");
+    await service.saveCatalog([unlabelled]);
+    assert.equal((await pg.query<{clover_item_id: string | null}>("select clover_item_id from plan_products where product_key='plain'")).rows[0].clover_item_id, null, "event metadata excludes even an exact ordinary-looking campaign name");
+    await pg.query("update plan_products set clover_item_id='campaign' where product_key='plain'");
+    const campaignCapture = (await pg.query<{payload: SalesFeed}>("select payload from stock_feed_days where date='2026-11-07'")).rows[0].payload;
+    await service.saveSnapshot({ ...campaignCapture, generatedAt: "2026-11-08T09:00:00Z" });
+    assert.equal((await pg.query("select * from daily_sales where date='2026-11-07'")).rows.length, 0, "a stale campaign link cannot materialize ordinary-looking campaign payments as daily sales");
   } finally { await pg.close(); }
 });
 
