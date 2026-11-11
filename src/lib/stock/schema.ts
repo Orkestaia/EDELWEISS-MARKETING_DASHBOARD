@@ -54,4 +54,14 @@ export const stockSchema = [
   `update daily_sales set hourly=(hourly #>> '{}')::jsonb where jsonb_typeof(hourly)='string'`,
   `update plan_days set explain=(explain #>> '{}')::jsonb where jsonb_typeof(explain)='string'`,
   `update stock_audit set payload=(payload #>> '{}')::jsonb where jsonb_typeof(payload)='string'`,
+  // Opaque provenance survives a refunded pickup disappearing from a refreshed
+  // capture, so a stale paid Sheet row cannot resurrect that website order.
+  `create table if not exists stock_pickup_order_sources (
+    order_id text primary key, paid_date date not null
+  )`,
+  `insert into stock_pickup_order_sources(order_id,paid_date)
+    select distinct on (i->>'orderId') i->>'orderId',f.date from stock_feed_days f
+    cross join lateral jsonb_array_elements(coalesce(f.payload->'onlinePickups','[]'::jsonb)) i
+    where i->>'orderId' is not null order by i->>'orderId',f.date
+    on conflict(order_id) do nothing`,
 ];

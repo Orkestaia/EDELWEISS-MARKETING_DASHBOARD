@@ -38,6 +38,7 @@ function validate(input: PlanInput): void {
   const salesDates = new Set<string>();
   for (const sale of input.sales) {
     dateKey(sale.date); nonnegative(sale.units, "Sales");
+    if (sale.inStoreUnits !== undefined) { nonnegative(sale.inStoreUnits, "Counter sales"); if (sale.inStoreUnits > sale.units) throw new RangeError("Counter sales cannot exceed base demand."); }
     if (salesDates.has(sale.date)) throw new RangeError("Daily sales must have unique dates.");
     salesDates.add(sale.date);
     if (sale.soldOutAt != null) minutes(sale.soldOutAt);
@@ -85,8 +86,8 @@ export function calculatePlan(input: PlanInput): PlanResult {
   const past = input.sales.filter(sale => sale.date < input.date && sale.complete !== false && onDate(sale.date).length === 0);
   // Only confirmed non-sell-out days can teach the curve. Hourly totals must
   // cover the entire daily total; imported daily-only or partial data cannot.
-  const curveDays = past.filter(sale => evidence(sale).soldOut === false && sale.units > 0 &&
-    Object.keys(sale.hourly).length > 0 && Math.abs(Object.values(sale.hourly).reduce((sum, units) => sum + units, 0) - sale.units) < 0.011);
+  const curveDays = past.filter(sale => evidence(sale).soldOut === false && (sale.inStoreUnits ?? sale.units) > 0 &&
+    Object.keys(sale.hourly).length > 0 && Math.abs(Object.values(sale.hourly).reduce((sum, units) => sum + units, 0) - (sale.inStoreUnits ?? sale.units)) < 0.011);
   if (!curveDays.length) warnings.add("No usable sales curve: confirmed non-sell-out days with complete hourly sales are needed.");
 
   const valid = past.filter(sale => weekday(sale.date) === weekday(input.date)).sort((a, b) => b.date.localeCompare(a.date));
@@ -104,7 +105,7 @@ export function calculatePlan(input: PlanInput): PlanResult {
         // Hour buckets are spread uniformly within the hour; at 10:00 the
         // cumulative share includes hours before 10, not the entire 10 bucket.
         share = mean(curveDays.map(day => Object.entries(day.hourly).reduce((sum, [hour, units]) =>
-          sum + units * Math.max(0, Math.min(1, (time - Number(hour) * 60) / 60)), 0) / day.units));
+          sum + units * Math.max(0, Math.min(1, (time - Number(hour) * 60) / 60)), 0) / (day.inStoreUnits ?? day.units)));
         if (share > 0) {
           const rawFactor = 1 / Math.min(1, share);
           correctionFactor = Math.min(settings.censorCap, rawFactor);
@@ -116,7 +117,7 @@ export function calculatePlan(input: PlanInput): PlanResult {
         share = 1;
       }
     }
-    return { date: sale.date, units: sale.units, demand: sale.units * correctionFactor, soldOut: state.soldOut === true,
+    return { date: sale.date, units: sale.units, demand: sale.units + (sale.inStoreUnits ?? sale.units) * (correctionFactor - 1), soldOut: state.soldOut === true,
       soldOutAt: state.soldOutAt, share, correctionFactor, capped };
   });
   const baseDays = corrections.slice(0, settings.baseWeeks);

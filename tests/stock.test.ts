@@ -14,7 +14,7 @@ export const catalog: CatalogItem[] = [
   { cloverItemId: "berliner-id", name: "Berliner", priceCents: 400, category: "Bakery", tracked: true, stock: 5 },
   { cloverItemId: "kuchen-id", name: "Seasonal Vanilla Kuchen", priceCents: 500, category: "Bakery", tracked: true, stock: 6 },
 ];
-const sales = (date: string, complete = true): SalesFeed => ({ date, timezone: "America/New_York", generatedAt: `${shiftDate(date, 1)}T07:30:00Z`, complete, items: [{ cloverItemId: "plain-id", name: "Plain Croissant", unitsInStore: 9, unitsOnline: 2, unitsTotal: 11, revenueCents: 4400, firstSaleAt: "07:12", lastSaleAt: "11:48", hourly: { "7": 1, "8": 3, "9": 4, "10": 2, "11": 1 }, stockEnd: 0 }] });
+const sales = (date: string, complete = true): SalesFeed => ({ date, timezone: "America/New_York", generatedAt: `${shiftDate(date, 1)}T07:30:00Z`, complete, onlinePickups: [], items: [{ cloverItemId: "plain-id", name: "Plain Croissant", unitsInStore: 9, unitsOnline: 2, unitsOnlineSameDay: 2, unitsOnlineOtherDay: 0, hourlyInStore: { "7": 1, "8": 3, "9": 4, "10": 1 }, unitsTotal: 11, revenueCents: 4400, firstSaleAt: "07:12", lastSaleAt: "11:48", hourly: { "7": 1, "8": 3, "9": 4, "10": 2, "11": 1 }, stockEnd: 0 }] });
 export async function stockFixture() {
   const pg = new PGlite();
   const connection = (client: Pick<PGlite, "query">): Connection => ({ query: async <T extends Row>(sql: string, params: unknown[] = []) => (await client.query<T>(sql, params)).rows });
@@ -94,7 +94,7 @@ test("Postgres integration: seed, optimistic edits, audit, mappings, snapshots a
       assert.equal((await pg.query("select * from daily_sales")).rows.length, 1);
       assert.equal(await service.saveSnapshot({ ...sales("2026-10-28", false), generatedAt: "2026-10-29T09:00:00Z" }), false);
       assert.equal(await service.saveSnapshot({ ...sales("2026-10-28"), generatedAt: "2026-10-29T06:00:00Z" }), false);
-      const corrected = sales("2026-10-28"); corrected.generatedAt = "2026-10-29T10:00:00Z"; corrected.items[0] = { ...corrected.items[0], unitsInStore: -0.5, unitsOnline: 0, unitsTotal: -0.5, revenueCents: -200 };
+      const corrected = sales("2026-10-28"); corrected.generatedAt = "2026-10-29T10:00:00Z"; corrected.items[0] = { ...corrected.items[0], unitsInStore: -0.5, unitsOnline: 0, unitsOnlineSameDay: 0, unitsTotal: -0.5, revenueCents: -200 };
       await service.saveSnapshot(corrected);
       assert.equal((await service.view("2026-10-28", true, now)).sales[0].units, -0.5);
       const deleted = sales("2026-10-27"); deleted.items.push({ ...deleted.items[0], cloverItemId: null, name: "Retired item" });

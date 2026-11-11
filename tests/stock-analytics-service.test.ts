@@ -73,6 +73,10 @@ test("accuracy requires final closes and genuine saved forecasts, never historic
     assert.equal(view.kpis.coverage.accuracyRows, 1);
     assert.equal(view.kpis.bias, 2);
     assert.equal(view.kpis.wmape, 20);
+    await f.pg.query("update plan_days set explain=explain || '{\"method\":\"weekday-demand-v1.2\"}'::jsonb where date='2026-11-02' and product_key='plain'");
+    const pickupAware = await f.service.view({ date: "2026-11-05", kind: "week", productKey: "plain" });
+    assert.equal(pickupAware.kpis.coverage.accuracyRows, 0);
+    assert.ok(pickupAware.warnings.some(message => /payment dates.*Pickup-aware/.test(message)));
     assert.equal(view.kpis.coverage.soldOutRows, 3);
     assert.equal(view.kpis.soldOutDays, 1);
     assert.equal(view.kpis.totals.baked, null);
