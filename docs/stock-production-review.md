@@ -1,5 +1,11 @@
 # Revisión de integración y producción — 2026-11-06
 
+## Guías de usuario actualizadas — 2026-11-13
+
+Edición EN/ES del 13 de noviembre: mantiene seis páginas y el caso ficticio Plain Croissant. Se aclaran la fecha de recogida y el conteo único de encargos, recomendaciones bloqueadas y uso manual revisado, separación de campañas Thanksgiving y la diferencia entre ventas por pago y métricas comparables por recogida. No cambian controles, autenticación ni datos de trabajo. El contenido evita vocabulario del contrato técnico.
+
+Doce páginas renderizadas y revisadas, fuentes embebidas y copias finales idénticas a los recursos privados. El generador comprueba fecha, temas nuevos y margen al pie; margen mínimo 113,5 pt. Recorrido de ayuda EN/ES en ordenador/móvil y descarga autenticada de ambos PDF con hash coincidente correctos. Inglés SHA256 `906fab0a9f617730924cdf280a9df3636f83f4ebeedd3cee6c870531ba8e1d88`; español `25020f30f4cdf76ff710b5baf26a1d7d151c49d5f22330fe8ff725b4c753438f`.
+
 El propietario ha autorizado integrar y desplegar el módulo de stock en el chat del proyecto. Base: main ec77c83, que ya incorpora marketing y Swiss Passport. Se integra codex/stock-phase-one mediante merge explícito, conservando el historial existente.
 
 ## Comportamiento incluido
